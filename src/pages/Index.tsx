@@ -1,20 +1,35 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, Sparkles } from "lucide-react";
-import { getMemories, hasTodayMemory } from "@/lib/memories";
+import { Camera, BookOpen, Sparkles, LogOut } from "lucide-react";
+import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
+import { useAuth } from "@/hooks/useAuth";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 
 type Tab = "today" | "memories";
 
 export default function Index() {
-  const [tab, setTab] = useState<Tab>(hasTodayMemory() ? "memories" : "today");
-  const [memories, setMemories] = useState(getMemories);
-  const [todayCaptured, setTodayCaptured] = useState(hasTodayMemory);
+  const { user, signOut } = useAuth();
+  const [tab, setTab] = useState<Tab>("today");
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [todayCaptured, setTodayCaptured] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    setMemories(getMemories());
-    setTodayCaptured(hasTodayMemory());
+  const refresh = useCallback(async () => {
+    try {
+      const [mems, hasToday] = await Promise.all([getMemories(), hasTodayMemory()]);
+      setMemories(mems);
+      setTodayCaptured(hasToday);
+      if (hasToday && tab === "today") setTab("memories");
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    refresh();
   }, []);
 
   const handleSaved = () => {
@@ -22,22 +37,37 @@ export default function Index() {
     setTab("memories");
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
-      {/* Header */}
       <header className="px-6 pt-12 pb-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
-            Daylight
-          </h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
+              Daylight
+            </h1>
+          </div>
+          <button
+            onClick={signOut}
+            className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
           One photo. One thought. Every day.
         </p>
       </header>
 
-      {/* Tab bar */}
       <div className="px-6 pb-2">
         <div className="flex bg-secondary rounded-xl p-1">
           {[
@@ -63,7 +93,6 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           {tab === "today" ? (

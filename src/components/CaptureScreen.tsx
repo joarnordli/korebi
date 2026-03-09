@@ -2,13 +2,17 @@ import { useState, useRef } from "react";
 import { Camera, Image, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { saveMemory, getTodayKey } from "@/lib/memories";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface CaptureScreenProps {
   onSaved: () => void;
 }
 
 export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
-  const [imageData, setImageData] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -16,24 +20,22 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImageFile(file);
     const reader = new FileReader();
-    reader.onload = () => setImageData(reader.result as string);
+    reader.onload = () => setPreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
-    if (!imageData) return;
+  const handleSave = async () => {
+    if (!imageFile || !user) return;
     setSaving(true);
-    setTimeout(() => {
-      saveMemory({
-        id: crypto.randomUUID(),
-        date: getTodayKey(),
-        imageData,
-        note: note.trim(),
-        createdAt: Date.now(),
-      });
+    try {
+      await saveMemory(user.id, getTodayKey(), imageFile, note);
       onSaved();
-    }, 400);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save memory");
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,7 +58,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
       />
 
       <AnimatePresence mode="wait">
-        {!imageData ? (
+        {!preview ? (
           <motion.button
             key="upload"
             initial={{ opacity: 0, scale: 0.95 }}
@@ -81,13 +83,14 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
           >
             <div className="relative rounded-2xl overflow-hidden shadow-elevated bg-card p-2">
               <img
-                src={imageData}
+                src={preview}
                 alt="Today's capture"
                 className="w-full aspect-[3/4] object-cover rounded-xl"
               />
               <button
                 onClick={() => {
-                  setImageData(null);
+                  setPreview(null);
+                  setImageFile(null);
                   if (fileRef.current) fileRef.current.value = "";
                 }}
                 className="absolute top-4 right-4 w-8 h-8 rounded-full bg-foreground/60 flex items-center justify-center"
@@ -99,9 +102,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
             <div className="relative">
               <textarea
                 value={note}
-                onChange={(e) =>
-                  setNote(e.target.value.slice(0, 160))
-                }
+                onChange={(e) => setNote(e.target.value.slice(0, 160))}
                 placeholder="What made today special?"
                 rows={3}
                 className="w-full resize-none rounded-xl border border-border bg-card px-4 py-3 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
