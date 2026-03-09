@@ -1,40 +1,63 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface Memory {
   id: string;
-  date: string; // YYYY-MM-DD
-  imageData: string; // base64 data URL
-  note: string;
-  createdAt: number;
+  date: string;
+  image_url: string;
+  note: string | null;
+  created_at: string;
+  user_id: string;
 }
 
-const STORAGE_KEY = "daily-memories";
-
-export function getMemories(): Memory[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+export async function getMemories(): Promise<Memory[]> {
+  const { data, error } = await supabase
+    .from("memories")
+    .select("*")
+    .order("date", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
 }
 
-export function saveMemory(memory: Memory): void {
-  const memories = getMemories();
-  const existing = memories.findIndex((m) => m.date === memory.date);
-  if (existing >= 0) {
-    memories[existing] = memory;
-  } else {
-    memories.unshift(memory);
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+export async function saveMemory(
+  userId: string,
+  date: string,
+  imageFile: File,
+  note: string
+): Promise<void> {
+  // Upload image
+  const ext = imageFile.name.split(".").pop() || "jpg";
+  const path = `${userId}/${date}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from("memories")
+    .upload(path, imageFile, { upsert: true });
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage.from("memories").getPublicUrl(path);
+
+  // Upsert memory
+  const { error } = await supabase.from("memories").upsert(
+    {
+      user_id: userId,
+      date,
+      image_url: urlData.publicUrl,
+      note: note.trim() || null,
+    },
+    { onConflict: "user_id,date" }
+  );
+  if (error) throw error;
+}
+
+export async function hasTodayMemory(): Promise<boolean> {
+  const today = getTodayKey();
+  const { count } = await supabase
+    .from("memories")
+    .select("id", { count: "exact", head: true })
+    .eq("date", today);
+  return (count ?? 0) > 0;
 }
 
 export function getTodayKey(): string {
   return new Date().toISOString().split("T")[0];
-}
-
-export function hasTodayMemory(): boolean {
-  const today = getTodayKey();
-  return getMemories().some((m) => m.date === today);
 }
 
 export function formatDate(dateStr: string): string {

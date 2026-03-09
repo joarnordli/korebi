@@ -15,7 +15,7 @@ export default function MemoryCard({ memory, index }: MemoryCardProps) {
       className="bg-card rounded-2xl shadow-card overflow-hidden p-2"
     >
       <img
-        src={memory.imageData}
+        src={memory.image_url}
         alt={memory.note || "Memory"}
         className="w-full aspect-[3/4] object-cover rounded-xl"
         loading="lazy"
