@@ -15,7 +15,37 @@ export async function getMemories(): Promise<Memory[]> {
     .select("*")
     .order("date", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  const memories = data ?? [];
+
+  // Generate signed URLs for each memory
+  const withSignedUrls = await Promise.all(
+    memories.map(async (m) => {
+      const signedUrl = await getSignedImageUrl(m.image_url);
+      return { ...m, image_url: signedUrl };
+    })
+  );
+  return withSignedUrls;
+}
+
+/** Extract storage path from a full URL or return as-is if already a path */
+function extractStoragePath(imageUrl: string): string {
+  if (!imageUrl.startsWith("http")) return imageUrl;
+  // Extract path after /object/public/memories/ or /object/sign/memories/
+  const match = imageUrl.match(/\/object\/(?:public|sign)\/memories\/(.+?)(?:\?.*)?$/);
+  if (match) return match[1];
+  // Fallback: try after /memories/
+  const fallback = imageUrl.match(/\/memories\/(.+?)(?:\?.*)?$/);
+  if (fallback) return fallback[1];
+  return imageUrl;
+}
+
+async function getSignedImageUrl(imageUrl: string): Promise<string> {
+  const path = extractStoragePath(imageUrl);
+  const { data, error } = await supabase.storage
+    .from("memories")
+    .createSignedUrl(path, 3600); // 1 hour expiry
+  if (error || !data?.signedUrl) return imageUrl; // fallback
+  return data.signedUrl;
 }
 
 export async function saveMemory(
@@ -32,14 +62,12 @@ export async function saveMemory(
     .upload(path, imageFile, { upsert: true });
   if (uploadError) throw uploadError;
 
-  const { data: urlData } = supabase.storage.from("memories").getPublicUrl(path);
-
-  // Upsert memory
+  // Store the storage path, not a public URL
   const { error } = await supabase.from("memories").upsert(
     {
       user_id: userId,
       date,
-      image_url: urlData.publicUrl,
+      image_url: path,
       note: note.trim() || null,
     },
     { onConflict: "user_id,date" }
@@ -61,8 +89,7 @@ export async function updateMemory(
       .from("memories")
       .upload(path, updates.imageFile, { upsert: true });
     if (uploadError) throw uploadError;
-    const { data: urlData } = supabase.storage.from("memories").getPublicUrl(path);
-    image_url = urlData.publicUrl;
+    image_url = path;
   }
 
   const updateData: Record<string, unknown> = {};
