@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, LogOut } from "lucide-react";
+import { Camera, BookOpen, LogOut, Settings } from "lucide-react";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import CaptureScreen from "@/components/CaptureScreen";
