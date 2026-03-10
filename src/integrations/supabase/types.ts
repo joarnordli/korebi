@@ -68,12 +68,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          active: boolean
+          is_trialing: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          is_trialing?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          is_trialing?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trial_usage: {
+        Row: {
+          email: string
+          first_signup_at: string
+        }
+        Insert: {
+          email: string
+          first_signup_at?: string
+        }
+        Update: {
+          email?: string
+          first_signup_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
