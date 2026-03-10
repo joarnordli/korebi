@@ -51,9 +51,9 @@ export default function Index() {
       <header className="px-6 pt-12 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+            <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
             <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
-              Daylight
+              Okiro
             </h1>
           </div>
           <button
