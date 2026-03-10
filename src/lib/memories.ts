@@ -113,15 +113,13 @@ export async function saveMemory(
   imageFile: File,
   note: string
 ): Promise<void> {
-  // Upload image
-  const ext = imageFile.name.split(".").pop() || "jpg";
-  const path = `${userId}/${date}.${ext}`;
+  const ext = await validateImageFile(imageFile);
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from("memories")
-    .upload(path, imageFile, { upsert: true });
+    .upload(path, imageFile, { upsert: true, contentType: imageFile.type });
   if (uploadError) throw uploadError;
 
-  // Store the storage path, not a public URL
   const { error } = await supabase.from("memories").upsert(
     {
       user_id: userId,
