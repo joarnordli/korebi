@@ -69,22 +69,13 @@ export default function Index() {
               Okiro
             </h1>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleManageSubscription}
+          <button
+              onClick={() => navigate("/profile")}
               className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-              title="Manage subscription"
+              title="Profile"
             >
-              <Settings className="w-4 h-4 text-muted-foreground" />
+              <User className="w-4 h-4 text-muted-foreground" />
             </button>
-            <button
-              onClick={signOut}
-              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </div>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
           One photo. One thought. Every day.
