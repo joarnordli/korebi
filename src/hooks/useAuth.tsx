@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   subscribed: boolean;
   isTrialing: boolean;
+  trialDaysLeft: number | null;
   subscriptionEnd: string | null;
   subscriptionLoading: boolean;
   checkSubscription: () => Promise<void>;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   subscribed: false,
   isTrialing: false,
+  trialDaysLeft: null,
   subscriptionEnd: null,
   subscriptionLoading: true,
   checkSubscription: async () => {},
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [isTrialing, setIsTrialing] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
 
@@ -41,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       setSubscribed(data?.subscribed ?? false);
       setIsTrialing(data?.is_trialing ?? false);
+      setTrialDaysLeft(data?.trial_days_left ?? null);
       setSubscriptionEnd(data?.subscription_end ?? null);
     } catch {
       setSubscribed(false);
@@ -97,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         subscribed,
         isTrialing,
+        trialDaysLeft,
         subscriptionEnd,
         subscriptionLoading,
         checkSubscription,

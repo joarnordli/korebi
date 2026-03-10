@@ -7,10 +7,9 @@ import okiroLogo from "@/assets/okiro-logo.png";
 import { LogOut, Crown, Loader2 } from "lucide-react";
 
 export default function Subscribe() {
-  const { user, signOut, checkSubscription, subscriptionLoading } = useAuth();
+  const { signOut, checkSubscription, subscriptionLoading } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // Check for checkout result from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
@@ -57,10 +56,10 @@ export default function Subscribe() {
             <Crown className="w-7 h-7 text-primary" />
           </div>
           <h2 className="font-display text-xl font-bold text-foreground mb-2">
-            Start Your Journey
+            Your free trial has ended
           </h2>
           <p className="font-body text-sm text-muted-foreground mb-6 leading-relaxed">
-            Capture one photo and one thought every day. Build a visual journal of your most meaningful moments.
+            We hope you enjoyed Okiro! Subscribe to keep capturing your daily moments and preserve all your memories.
           </p>
 
           <div className="bg-secondary rounded-xl p-4 mb-6">
@@ -68,7 +67,7 @@ export default function Subscribe() {
               7 NOK<span className="font-body text-sm font-normal text-muted-foreground">/week</span>
             </p>
             <p className="font-body text-xs text-muted-foreground mt-1">
-              Tax included · 7-day free trial
+              Tax included
             </p>
           </div>
 
@@ -83,7 +82,7 @@ export default function Subscribe() {
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Start Free Trial
+                Subscribe Now
               </>
             )}
           </motion.button>
