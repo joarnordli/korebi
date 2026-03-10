@@ -7,7 +7,7 @@ interface MemoriesFeedProps {
   onUpdated: () => void;
 }
 
-export default function MemoriesFeed({ memories }: MemoriesFeedProps) {
+export default function MemoriesFeed({ memories, onUpdated }: MemoriesFeedProps) {
   if (memories.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
