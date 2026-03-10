@@ -6,14 +6,24 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Subscribe from "./pages/Subscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return null;
+  const { user, loading, subscribed, subscriptionLoading } = useAuth();
+  if (loading || subscriptionLoading) return null;
   if (!user) return <Navigate to="/auth" replace />;
+  if (!subscribed) return <Navigate to="/subscribe" replace />;
+  return <>{children}</>;
+}
+
+function SubscribeRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, subscribed, subscriptionLoading } = useAuth();
+  if (loading || subscriptionLoading) return null;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (subscribed) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -34,6 +44,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+            <Route path="/subscribe" element={<SubscribeRoute><Subscribe /></SubscribeRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
