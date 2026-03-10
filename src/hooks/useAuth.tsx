@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [isTrialing, setIsTrialing] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
 
