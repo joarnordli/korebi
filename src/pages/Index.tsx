@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, BookOpen, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -71,10 +72,15 @@ export default function Index() {
           </div>
           <button
               onClick={() => navigate("/profile")}
-              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              className="rounded-full"
               title="Profile"
             >
-              <User className="w-4 h-4 text-muted-foreground" />
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+                <AvatarFallback className="bg-secondary">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
             </button>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">

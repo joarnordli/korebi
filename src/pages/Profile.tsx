@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,9 +108,12 @@ export default function Profile() {
           Back
         </button>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <img src={okiroLogo} alt="" className="w-7 h-7" />
-          </div>
+          <Avatar className="w-12 h-12">
+            <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+            <AvatarFallback className="bg-primary/10">
+              <User className="w-6 h-6 text-muted-foreground" />
+            </AvatarFallback>
+          </Avatar>
           <div>
             <h1 className="font-display text-xl font-bold text-foreground">Profile</h1>
             <p className="font-body text-sm text-muted-foreground truncate max-w-[220px]">
