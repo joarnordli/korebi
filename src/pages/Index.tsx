@@ -72,10 +72,15 @@ export default function Index() {
           </div>
           <button
               onClick={() => navigate("/profile")}
-              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              className="rounded-full"
               title="Profile"
             >
-              <User className="w-4 h-4 text-muted-foreground" />
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+                <AvatarFallback className="bg-secondary">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
             </button>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
