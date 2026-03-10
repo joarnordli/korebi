@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       setSubscribed(data?.subscribed ?? false);
       setIsTrialing(data?.is_trialing ?? false);
+      setTrialDaysLeft(data?.trial_days_left ?? null);
       setSubscriptionEnd(data?.subscription_end ?? null);
     } catch {
       setSubscribed(false);
