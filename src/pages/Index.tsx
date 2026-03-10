@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, BookOpen, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
