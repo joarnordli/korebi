@@ -107,7 +107,7 @@ export default function Index() {
               {todayCaptured ? (
                 <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                   <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Sparkles className="w-6 h-6 text-primary" />
+                    <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
                   </div>
                   <p className="font-display text-lg text-foreground">
                     Today's moment captured
