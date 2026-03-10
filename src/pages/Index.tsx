@@ -12,7 +12,8 @@ import { toast } from "sonner";
 type Tab = "today" | "memories";
 
 export default function Index() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const [memories, setMemories] = useState<Memory[]>([]);
   const [todayCaptured, setTodayCaptured] = useState(false);
