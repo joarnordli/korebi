@@ -89,8 +89,7 @@ export async function updateMemory(
       .from("memories")
       .upload(path, updates.imageFile, { upsert: true });
     if (uploadError) throw uploadError;
-    const { data: urlData } = supabase.storage.from("memories").getPublicUrl(path);
-    image_url = urlData.publicUrl;
+    image_url = path;
   }
 
   const updateData: Record<string, unknown> = {};
