@@ -13,6 +13,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${d}`);
 };
 
+const FREE_TRIAL_DAYS = 7;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,15 +43,38 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { email: user.email });
 
+    // Check free trial based on account creation date
+    const createdAt = new Date(user.created_at);
+    const now = new Date();
+    const daysSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+    const trialDaysLeft = Math.max(0, Math.ceil(FREE_TRIAL_DAYS - daysSinceCreation));
+    const inFreeTrial = daysSinceCreation < FREE_TRIAL_DAYS;
+
+    logStep("Trial check", { daysSinceCreation: daysSinceCreation.toFixed(1), trialDaysLeft, inFreeTrial });
+
+    if (inFreeTrial) {
+      logStep("User is in free trial period");
+      return new Response(
+        JSON.stringify({
+          subscribed: true,
+          is_trialing: true,
+          trial_days_left: trialDaysLeft,
+          subscription_end: new Date(createdAt.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // Free trial expired — check Stripe for active subscription
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
     if (customers.data.length === 0) {
-      logStep("No Stripe customer found");
-      return new Response(JSON.stringify({ subscribed: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+      logStep("No Stripe customer found, trial expired");
+      return new Response(
+        JSON.stringify({ subscribed: false, trial_days_left: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     const customerId = customers.data[0].id;
@@ -61,7 +86,6 @@ serve(async (req) => {
       limit: 1,
     });
 
-    // Also check trialing
     let sub = subscriptions.data[0];
     if (!sub) {
       const trialing = await stripe.subscriptions.list({
@@ -73,37 +97,35 @@ serve(async (req) => {
     }
 
     if (!sub) {
-      logStep("No active or trialing subscription");
-      return new Response(JSON.stringify({ subscribed: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+      logStep("No active or trialing Stripe subscription, trial expired");
+      return new Response(
+        JSON.stringify({ subscribed: false, trial_days_left: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     let subscriptionEnd: string | null = null;
     try {
-      const endTimestamp = typeof sub.current_period_end === "number" 
-        ? sub.current_period_end 
+      const endTimestamp = typeof sub.current_period_end === "number"
+        ? sub.current_period_end
         : Number(sub.current_period_end);
       if (!isNaN(endTimestamp) && endTimestamp > 0) {
         subscriptionEnd = new Date(endTimestamp * 1000).toISOString();
       }
     } catch (e) {
-      logStep("Warning: could not parse subscription end date", { raw: sub.current_period_end });
+      logStep("Warning: could not parse subscription end date");
     }
-    const isTrialing = sub.status === "trialing";
-    logStep("Subscription found", { status: sub.status, end: subscriptionEnd });
+
+    logStep("Active Stripe subscription found", { status: sub.status, end: subscriptionEnd });
 
     return new Response(
       JSON.stringify({
         subscribed: true,
-        is_trialing: isTrialing,
+        is_trialing: sub.status === "trialing",
+        trial_days_left: 0,
         subscription_end: subscriptionEnd,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   subscribed: boolean;
   isTrialing: boolean;
+  trialDaysLeft: number | null;
   subscriptionEnd: string | null;
   subscriptionLoading: boolean;
   checkSubscription: () => Promise<void>;
