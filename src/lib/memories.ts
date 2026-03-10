@@ -140,11 +140,11 @@ export async function updateMemory(
   let image_url: string | undefined;
 
   if (updates.imageFile) {
-    const ext = updates.imageFile.name.split(".").pop() || "jpg";
-    const path = `${userId}/${memoryId}.${ext}`;
+    const ext = await validateImageFile(updates.imageFile);
+    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from("memories")
-      .upload(path, updates.imageFile, { upsert: true });
+      .upload(path, updates.imageFile, { upsert: true, contentType: updates.imageFile.type });
     if (uploadError) throw uploadError;
     image_url = path;
   }
