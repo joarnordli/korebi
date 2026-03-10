@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, BookOpen, User } from "lucide-react";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type Tab = "today" | "memories";
