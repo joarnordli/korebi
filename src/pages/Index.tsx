@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, LogOut } from "lucide-react";
+import { Camera, BookOpen, LogOut, Settings } from "lucide-react";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type Tab = "today" | "memories";
 
@@ -28,6 +30,25 @@ export default function Index() {
       setLoading(false);
     }
   }, [tab]);
+
+  // Handle checkout redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      toast.success("Subscription activated!");
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
+  const handleManageSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open subscription management");
+    }
+  };
 
   useEffect(() => {
     refresh();
@@ -56,13 +77,22 @@ export default function Index() {
               Okiro
             </h1>
           </div>
-          <button
-            onClick={signOut}
-            className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleManageSubscription}
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              title="Manage subscription"
+            >
+              <Settings className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={signOut}
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
           One photo. One thought. Every day.
