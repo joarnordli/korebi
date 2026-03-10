@@ -101,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         subscribed,
         isTrialing,
+        trialDaysLeft,
         subscriptionEnd,
         subscriptionLoading,
         checkSubscription,
