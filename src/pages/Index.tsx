@@ -31,6 +31,25 @@ export default function Index() {
     }
   }, [tab]);
 
+  // Handle checkout redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      toast.success("Subscription activated!");
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
+  const handleManageSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      if (error) throw error;
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open subscription management");
+    }
+  };
+
   useEffect(() => {
     refresh();
   }, []);
