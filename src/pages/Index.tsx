@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, Sparkles, LogOut } from "lucide-react";
+import { Camera, BookOpen, LogOut } from "lucide-react";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
+import okiroLogo from "@/assets/okiro-logo.png";
 
 type Tab = "today" | "memories";
 
