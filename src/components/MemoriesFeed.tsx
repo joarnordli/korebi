@@ -4,6 +4,7 @@ import { BookOpen } from "lucide-react";
 
 interface MemoriesFeedProps {
   memories: Memory[];
+  onUpdated: () => void;
 }
 
 export default function MemoriesFeed({ memories }: MemoriesFeedProps) {
