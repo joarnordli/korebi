@@ -9,6 +9,65 @@ export interface Memory {
   user_id: string;
 }
 
+const ALLOWED_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const MAGIC_BYTES: { bytes: number[]; offset?: number; type: string }[] = [
+  { bytes: [0xff, 0xd8, 0xff], type: "image/jpeg" },
+  { bytes: [0x89, 0x50, 0x4e, 0x47], type: "image/png" },
+  { bytes: [0x47, 0x49, 0x46, 0x38], type: "image/gif" },
+  // WebP: starts with RIFF....WEBP
+  { bytes: [0x52, 0x49, 0x46, 0x46], type: "image/webp" },
+];
+
+/**
+ * Validates an image file by checking MIME type, magic bytes, and size.
+ * Returns the safe file extension derived from magic bytes.
+ */
+async function validateImageFile(file: File): Promise<string> {
+  // 1. Size check
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error("File too large. Maximum size is 10 MB.");
+  }
+
+  // 2. MIME type check
+  if (!ALLOWED_TYPES[file.type]) {
+    throw new Error("Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.");
+  }
+
+  // 3. Magic bytes check
+  const header = await file.slice(0, 12).arrayBuffer();
+  const arr = new Uint8Array(header);
+
+  let detectedType: string | null = null;
+  for (const sig of MAGIC_BYTES) {
+    const offset = sig.offset ?? 0;
+    if (sig.bytes.every((b, i) => arr[offset + i] === b)) {
+      // For WebP, also verify bytes 8-11 are "WEBP"
+      if (sig.type === "image/webp") {
+        if (arr[8] === 0x57 && arr[9] === 0x45 && arr[10] === 0x42 && arr[11] === 0x50) {
+          detectedType = sig.type;
+        }
+      } else {
+        detectedType = sig.type;
+      }
+      break;
+    }
+  }
+
+  if (!detectedType) {
+    throw new Error("File content does not match a supported image format.");
+  }
+
+  return ALLOWED_TYPES[detectedType];
+}
+
 export async function getMemories(): Promise<Memory[]> {
   const { data, error } = await supabase
     .from("memories")
