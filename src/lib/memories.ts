@@ -62,14 +62,12 @@ export async function saveMemory(
     .upload(path, imageFile, { upsert: true });
   if (uploadError) throw uploadError;
 
-  const { data: urlData } = supabase.storage.from("memories").getPublicUrl(path);
-
-  // Upsert memory
+  // Store the storage path, not a public URL
   const { error } = await supabase.from("memories").upsert(
     {
       user_id: userId,
       date,
-      image_url: urlData.publicUrl,
+      image_url: path,
       note: note.trim() || null,
     },
     { onConflict: "user_id,date" }
