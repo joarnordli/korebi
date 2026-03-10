@@ -21,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   subscribed: false,
   isTrialing: false,
+  trialDaysLeft: null,
   subscriptionEnd: null,
   subscriptionLoading: true,
   checkSubscription: async () => {},
