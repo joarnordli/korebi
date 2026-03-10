@@ -43,23 +43,51 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { email: user.email });
 
-    // Check free trial based on account creation date
-    const createdAt = new Date(user.created_at);
-    const now = new Date();
-    const daysSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
-    const trialDaysLeft = Math.max(0, Math.ceil(FREE_TRIAL_DAYS - daysSinceCreation));
-    const inFreeTrial = daysSinceCreation < FREE_TRIAL_DAYS;
+    // Look up trial usage by email (prevents re-signup abuse)
+    const { data: trialRow } = await supabaseClient
+      .from("trial_usage")
+      .select("first_signup_at")
+      .eq("email", user.email.toLowerCase())
+      .single();
 
-    logStep("Trial check", { daysSinceCreation: daysSinceCreation.toFixed(1), trialDaysLeft, inFreeTrial });
+    // If no trial_usage row exists yet (edge case), create one
+    let firstSignupAt: Date;
+    if (trialRow) {
+      firstSignupAt = new Date(trialRow.first_signup_at);
+    } else {
+      // Record it now and use current time
+      await supabaseClient
+        .from("trial_usage")
+        .insert({ email: user.email.toLowerCase(), first_signup_at: new Date().toISOString() });
+      firstSignupAt = new Date();
+    }
+
+    const now = new Date();
+    const daysSinceFirstSignup = (now.getTime() - firstSignupAt.getTime()) / (1000 * 60 * 60 * 24);
+    const trialDaysLeft = Math.max(0, Math.ceil(FREE_TRIAL_DAYS - daysSinceFirstSignup));
+    const inFreeTrial = daysSinceFirstSignup < FREE_TRIAL_DAYS;
+
+    logStep("Trial check", { firstSignupAt: firstSignupAt.toISOString(), daysSinceFirstSignup: daysSinceFirstSignup.toFixed(1), trialDaysLeft, inFreeTrial });
 
     if (inFreeTrial) {
       logStep("User is in free trial period");
+
+      // Upsert subscription as active (trialing)
+      await supabaseClient
+        .from("subscriptions")
+        .upsert({
+          user_id: user.id,
+          active: true,
+          is_trialing: true,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
       return new Response(
         JSON.stringify({
           subscribed: true,
           is_trialing: true,
           trial_days_left: trialDaysLeft,
-          subscription_end: new Date(createdAt.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+          subscription_end: new Date(firstSignupAt.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString(),
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
@@ -71,6 +99,17 @@ serve(async (req) => {
 
     if (customers.data.length === 0) {
       logStep("No Stripe customer found, trial expired");
+
+      // Mark subscription as inactive
+      await supabaseClient
+        .from("subscriptions")
+        .upsert({
+          user_id: user.id,
+          active: false,
+          is_trialing: false,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
       return new Response(
         JSON.stringify({ subscribed: false, trial_days_left: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -98,6 +137,16 @@ serve(async (req) => {
 
     if (!sub) {
       logStep("No active or trialing Stripe subscription, trial expired");
+
+      await supabaseClient
+        .from("subscriptions")
+        .upsert({
+          user_id: user.id,
+          active: false,
+          is_trialing: false,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
       return new Response(
         JSON.stringify({ subscribed: false, trial_days_left: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -117,6 +166,16 @@ serve(async (req) => {
     }
 
     logStep("Active Stripe subscription found", { status: sub.status, end: subscriptionEnd });
+
+    // Mark subscription as active
+    await supabaseClient
+      .from("subscriptions")
+      .upsert({
+        user_id: user.id,
+        active: true,
+        is_trialing: sub.status === "trialing",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
 
     return new Response(
       JSON.stringify({
