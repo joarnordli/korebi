@@ -1,18 +1,19 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, LogOut, Settings } from "lucide-react";
+import { Camera, BookOpen, User } from "lucide-react";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "sonner"; // used in checkout redirect
 
 type Tab = "today" | "memories";
 
 export default function Index() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const [memories, setMemories] = useState<Memory[]>([]);
   const [todayCaptured, setTodayCaptured] = useState(false);
@@ -40,15 +41,6 @@ export default function Index() {
     }
   }, []);
 
-  const handleManageSubscription = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("customer-portal");
-      if (error) throw error;
-      if (data?.url) window.open(data.url, "_blank");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to open subscription management");
-    }
-  };
 
   useEffect(() => {
     refresh();
@@ -77,22 +69,13 @@ export default function Index() {
               Okiro
             </h1>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleManageSubscription}
+          <button
+              onClick={() => navigate("/profile")}
               className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-              title="Manage subscription"
+              title="Profile"
             >
-              <Settings className="w-4 h-4 text-muted-foreground" />
+              <User className="w-4 h-4 text-muted-foreground" />
             </button>
-            <button
-              onClick={signOut}
-              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </div>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
           One photo. One thought. Every day.
