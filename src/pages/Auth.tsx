@@ -44,6 +44,11 @@ export default function Auth() {
       redirect_uri: window.location.origin,
     });
     if (error) toast.error(error.message);
+  const handleApple = async () => {
+    const { error } = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (error) toast.error(error.message);
   };
 
   return (
