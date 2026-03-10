@@ -80,7 +80,17 @@ serve(async (req) => {
       });
     }
 
-    const subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+    let subscriptionEnd: string | null = null;
+    try {
+      const endTimestamp = typeof sub.current_period_end === "number" 
+        ? sub.current_period_end 
+        : Number(sub.current_period_end);
+      if (!isNaN(endTimestamp) && endTimestamp > 0) {
+        subscriptionEnd = new Date(endTimestamp * 1000).toISOString();
+      }
+    } catch (e) {
+      logStep("Warning: could not parse subscription end date", { raw: sub.current_period_end });
+    }
     const isTrialing = sub.status === "trialing";
     logStep("Subscription found", { status: sub.status, end: subscriptionEnd });
 
