@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type Tab = "today" | "memories";
 
