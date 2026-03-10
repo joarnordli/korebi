@@ -77,13 +77,22 @@ export default function Index() {
               Okiro
             </h1>
           </div>
-          <button
-            onClick={signOut}
-            className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleManageSubscription}
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              title="Manage subscription"
+            >
+              <Settings className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={signOut}
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
           One photo. One thought. Every day.
