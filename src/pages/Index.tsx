@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, Sparkles, LogOut } from "lucide-react";
+import { Camera, BookOpen, LogOut } from "lucide-react";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
+import okiroLogo from "@/assets/okiro-logo.png";
 
 type Tab = "today" | "memories";
 
@@ -40,7 +41,7 @@ export default function Index() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+        <img src={okiroLogo} alt="Okiro" className="w-8 h-8 animate-pulse" />
       </div>
     );
   }
@@ -50,9 +51,9 @@ export default function Index() {
       <header className="px-6 pt-12 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+            <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
             <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
-              Daylight
+              Okiro
             </h1>
           </div>
           <button
@@ -106,7 +107,7 @@ export default function Index() {
               {todayCaptured ? (
                 <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                   <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Sparkles className="w-6 h-6 text-primary" />
+                    <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
                   </div>
                   <p className="font-display text-lg text-foreground">
                     Today's moment captured
@@ -127,7 +128,7 @@ export default function Index() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <MemoriesFeed memories={memories} />
+              <MemoriesFeed memories={memories} onUpdated={refresh} />
             </motion.div>
           )}
         </AnimatePresence>

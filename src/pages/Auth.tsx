@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import okiroLogo from "@/assets/okiro-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
@@ -53,9 +54,9 @@ export default function Auth() {
         className="w-full max-w-sm"
       >
         <div className="flex items-center gap-2 justify-center mb-2">
-          <Sparkles className="w-6 h-6 text-primary" />
+          <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
           <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
-            Daylight
+            Okiro
           </h1>
         </div>
         <p className="font-body text-sm text-muted-foreground text-center mb-8">

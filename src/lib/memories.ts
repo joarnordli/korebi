@@ -47,6 +47,37 @@ export async function saveMemory(
   if (error) throw error;
 }
 
+export async function updateMemory(
+  memoryId: string,
+  userId: string,
+  updates: { note?: string; imageFile?: File }
+): Promise<void> {
+  let image_url: string | undefined;
+
+  if (updates.imageFile) {
+    const ext = updates.imageFile.name.split(".").pop() || "jpg";
+    const path = `${userId}/${memoryId}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("memories")
+      .upload(path, updates.imageFile, { upsert: true });
+    if (uploadError) throw uploadError;
+    const { data: urlData } = supabase.storage.from("memories").getPublicUrl(path);
+    image_url = urlData.publicUrl;
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (updates.note !== undefined) updateData.note = updates.note.trim() || null;
+  if (image_url) updateData.image_url = image_url;
+
+  if (Object.keys(updateData).length === 0) return;
+
+  const { error } = await supabase
+    .from("memories")
+    .update(updateData)
+    .eq("id", memoryId);
+  if (error) throw error;
+}
+
 export async function hasTodayMemory(): Promise<boolean> {
   const today = getTodayKey();
   const { count } = await supabase
