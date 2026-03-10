@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
-import { toast } from "sonner";
+import { toast } from "sonner"; // used in checkout redirect
 
 type Tab = "today" | "memories";
 
