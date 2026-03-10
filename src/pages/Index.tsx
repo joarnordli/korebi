@@ -128,7 +128,7 @@ export default function Index() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <MemoriesFeed memories={memories} />
+              <MemoriesFeed memories={memories} onUpdated={refresh} />
             </motion.div>
           )}
         </AnimatePresence>
