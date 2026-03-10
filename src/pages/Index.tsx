@@ -41,7 +41,7 @@ export default function Index() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+        <img src={okiroLogo} alt="Okiro" className="w-8 h-8 animate-pulse" />
       </div>
     );
   }
