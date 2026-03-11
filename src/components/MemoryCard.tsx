@@ -97,9 +97,9 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
           {!editing && (
             <button
               onClick={() => setEditing(true)}
-              className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
+              className="p-1"
             >
-              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
         </div>
