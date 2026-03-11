@@ -17,7 +17,7 @@ export default function Index() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
-  const { memories, todayCaptured, loading, refresh } = useMemories();
+  const { memories, todayCaptured, streak, loading, refresh } = useMemories();
 
   // Auto-switch to memories tab if today is already captured
   useEffect(() => {
@@ -176,15 +176,19 @@ export default function Index() {
             
               {todayCaptured ?
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
-                  </div>
+                  <img src={okiroLogo} alt="Okiro" className="w-10 h-10 mb-4" />
                   <p className="font-display text-lg text-foreground">
                     Today's moment captured
                   </p>
                   <p className="font-body text-sm text-muted-foreground mt-1">
                     Come back tomorrow for a new memory
                   </p>
+                  {streak > 0 && (
+                    <div className="mt-4 flex items-center gap-1.5">
+                      <span className="text-2xl font-display font-bold text-accent">{streak}</span>
+                      <span className="font-body text-sm text-muted-foreground">day streak 🔥</span>
+                    </div>
+                  )}
                 </div> :
 
             <CaptureScreen onSaved={handleSaved} />
