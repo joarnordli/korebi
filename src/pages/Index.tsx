@@ -144,13 +144,8 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Fade-out edge */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none translate-y-full"
-          style={{
-            background: "linear-gradient(to bottom, hsl(var(--background) / 0.7), transparent)"
-          }} />
-        
+
+
       </div>
 
       {/* Scrollable content */}
