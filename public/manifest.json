@@ -1,0 +1,17 @@
+{
+  "name": "Okiro",
+  "short_name": "Okiro",
+  "description": "Reflect on your day",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF5F5",
+  "theme_color": "#E8607A",
+  "icons": [
+    {
+      "src": "/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
