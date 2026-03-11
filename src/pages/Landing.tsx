@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { Camera, BookOpen, Sparkles, ArrowRight, Clock, CreditCard } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Camera, BookOpen, Sparkles, ArrowRight, Clock, CreditCard, Download, Share, Plus, MoreVertical, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import okiroLogo from "@/assets/okiro-logo.png";
 
