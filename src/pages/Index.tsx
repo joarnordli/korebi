@@ -28,14 +28,14 @@ export default function Index() {
       setTodayCaptured(hasToday);
       if (hasToday && tab === "today") setTab("memories");
     } catch {
+
       // silently fail
-    } finally {
-      setLoading(false);
+    } finally {setLoading(false);
     }
   }, [tab]);
 
   const { containerRef, pullDistance, refreshing } = usePullToRefresh({
-    onRefresh: refresh,
+    onRefresh: refresh
   });
 
   // Handle checkout redirect
@@ -83,8 +83,8 @@ export default function Index() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <img src={okiroLogo} alt="Okiro" className="w-8 h-8 animate-pulse" />
-      </div>
-    );
+      </div>);
+
   }
 
   const pullProgress = Math.min(pullDistance / 80, 1);
@@ -93,7 +93,7 @@ export default function Index() {
     <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
       {/* Fixed header */}
       <div className="fixed top-0 left-0 right-0 z-10 backdrop-blur-xl bg-background/70 max-w-md mx-auto">
-        <header className="px-6 pt-12 pb-4">
+        <header className="px-6 pb-4 pt-[16px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
@@ -104,8 +104,8 @@ export default function Index() {
             <button
               onClick={() => navigate("/profile")}
               className="rounded-full"
-              title="Profile"
-            >
+              title="Profile">
+              
               <Avatar className="w-8 h-8">
                 <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
                 <AvatarFallback className="bg-secondary">
@@ -122,25 +122,25 @@ export default function Index() {
         <div className="px-6 pb-2">
           <div className="flex bg-secondary rounded-xl p-1">
             {[
-              { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
-              { key: "memories" as Tab, label: "Memories", icon: BookOpen },
-            ].map(({ key, label, icon: Icon, badge }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-body text-sm font-medium transition-all relative ${
-                  tab === key
-                    ? "bg-background text-foreground shadow-card"
-                    : "text-muted-foreground"
-                }`}
-              >
+            { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
+            { key: "memories" as Tab, label: "Memories", icon: BookOpen }].
+            map(({ key, label, icon: Icon, badge }) =>
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-body text-sm font-medium transition-all relative ${
+              tab === key ?
+              "bg-background text-foreground shadow-card" :
+              "text-muted-foreground"}`
+              }>
+              
                 <Icon className="w-4 h-4" />
                 {label}
-                {badge && (
-                  <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
-                )}
+                {badge &&
+              <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+              }
               </button>
-            ))}
+            )}
           </div>
         </div>
 
@@ -148,9 +148,9 @@ export default function Index() {
         <div
           className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none translate-y-full"
           style={{
-            background: "linear-gradient(to bottom, hsl(var(--background) / 0.7), transparent)",
-          }}
-        />
+            background: "linear-gradient(to bottom, hsl(var(--background) / 0.7), transparent)"
+          }} />
+        
       </div>
 
       {/* Scrollable content */}
@@ -159,40 +159,40 @@ export default function Index() {
         className="flex-1 overflow-y-auto pt-[180px]"
         style={{ overscrollBehavior: "none" }}
         onTouchStart={handleSwipeStart}
-        onTouchEnd={handleSwipeEnd}
-      >
+        onTouchEnd={handleSwipeEnd}>
+        
         {/* Pull-to-refresh indicator */}
         <div
           className="flex items-center justify-center overflow-hidden transition-[height] duration-200 ease-out"
           style={{
             height: pullDistance > 0 ? `${pullDistance}px` : "0px",
-            transition: pullDistance > 0 ? "none" : "height 0.3s ease-out",
-          }}
-        >
+            transition: pullDistance > 0 ? "none" : "height 0.3s ease-out"
+          }}>
+          
           <div
             className="flex items-center justify-center"
             style={{
               opacity: pullProgress,
-              transform: `rotate(${pullProgress * 360}deg)`,
-            }}
-          >
+              transform: `rotate(${pullProgress * 360}deg)`
+            }}>
+            
             <RefreshCw
-              className={`w-5 h-5 text-muted-foreground ${refreshing ? "animate-spin" : ""}`}
-            />
+              className={`w-5 h-5 text-muted-foreground ${refreshing ? "animate-spin" : ""}`} />
+            
           </div>
         </div>
 
         <AnimatePresence mode="wait">
-          {tab === "today" ? (
-            <motion.div
-              key="today"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              {todayCaptured ? (
-                <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+          {tab === "today" ?
+          <motion.div
+            key="today"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}>
+            
+              {todayCaptured ?
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                   <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                     <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
                   </div>
@@ -202,24 +202,24 @@ export default function Index() {
                   <p className="font-body text-sm text-muted-foreground mt-1">
                     Come back tomorrow for a new memory
                   </p>
-                </div>
-              ) : (
-                <CaptureScreen onSaved={handleSaved} />
-              )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="memories"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2 }}
-            >
+                </div> :
+
+            <CaptureScreen onSaved={handleSaved} />
+            }
+            </motion.div> :
+
+          <motion.div
+            key="memories"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}>
+            
               <MemoriesFeed memories={memories} onUpdated={refresh} />
             </motion.div>
-          )}
+          }
         </AnimatePresence>
       </div>
-    </div>
-  );
+    </div>);
+
 }
