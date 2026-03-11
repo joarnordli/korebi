@@ -167,7 +167,11 @@ export default function Index() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+      >
         <AnimatePresence mode="wait">
           {tab === "today" ? (
             <motion.div
