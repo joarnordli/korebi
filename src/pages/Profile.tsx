@@ -102,7 +102,7 @@ export default function Profile() {
         );
 
         setRemindersEnabled(true);
-        toast.success("Daily reminders enabled! You'll get a nudge at 11 AM.");
+        toast.success("Daily reminders enabled! You'll get a nudge between 10 AM and 10 PM.");
       } else {
         // Unsubscribe from push
         try {
