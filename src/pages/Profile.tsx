@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2 } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import okiroLogo from "@/assets/okiro-logo.png";
 
+const VAPID_PUBLIC_KEY = "BHax1hUAtH0nKUyh3NMz3p4JTZS3pPPldR8YpI7FaLGVefw0DLCLRXoN0vJB7sGalsvR1FgJhcvicgjWMGCH9F4";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
 export default function Profile() {
   const { user, signOut, subscribed, isTrialing, trialDaysLeft, subscriptionEnd, checkSubscription, subscriptionLoading } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +37,97 @@ export default function Profile() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+  const [remindersLoading, setRemindersLoading] = useState(true);
+  const [togglingReminders, setTogglingReminders] = useState(false);
+
+  // Check current reminder status
+  useEffect(() => {
+    if (!user) return;
+    const checkReminders = async () => {
+      const { data } = await supabase
+        .from("push_subscriptions")
+        .select("id, reminder_enabled")
+        .eq("user_id", user.id)
+        .limit(1);
+      setRemindersEnabled(data && data.length > 0 && data[0].reminder_enabled);
+      setRemindersLoading(false);
+    };
+    checkReminders();
+  }, [user]);
+
+  const handleToggleReminders = async (enabled: boolean) => {
+    if (togglingReminders) return;
+    setTogglingReminders(true);
+
+    try {
+      if (enabled) {
+        // Request notification permission
+        if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+          toast.error("Push notifications are not supported in this browser.");
+          setTogglingReminders(false);
+          return;
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          toast.error("Notification permission denied. Please enable it in your browser settings.");
+          setTogglingReminders(false);
+          return;
+        }
+
+        // Get service worker registration
+        const registration = await navigator.serviceWorker.ready;
+
+        // Subscribe to push
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+
+        const subJson = subscription.toJSON();
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        // Save to database
+        await supabase.from("push_subscriptions").upsert(
+          {
+            user_id: user!.id,
+            endpoint: subJson.endpoint!,
+            p256dh: subJson.keys!.p256dh!,
+            auth: subJson.keys!.auth!,
+            timezone,
+            reminder_enabled: true,
+          },
+          { onConflict: "user_id,endpoint" }
+        );
+
+        setRemindersEnabled(true);
+        toast.success("Daily reminders enabled! You'll get a nudge at 11 AM.");
+      } else {
+        // Unsubscribe from push
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) await subscription.unsubscribe();
+        } catch {
+          // Continue even if unsubscribe fails
+        }
+
+        // Remove from database
+        await supabase
+          .from("push_subscriptions")
+          .delete()
+          .eq("user_id", user!.id);
+
+        setRemindersEnabled(false);
+        toast.success("Daily reminders disabled.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update reminder settings");
+    } finally {
+      setTogglingReminders(false);
+    }
+  };
 
   const handleManageSubscription = async () => {
     setManagingSubscription(true);
@@ -223,6 +326,35 @@ export default function Profile() {
               </button>
             </div>
           )}
+        </motion.div>
+
+        {/* Daily Reminders */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="bg-card rounded-2xl shadow-card p-5"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-primary" />
+              <div>
+                <h2 className="font-display text-sm font-bold text-foreground">Daily reminders</h2>
+                <p className="font-body text-xs text-muted-foreground mt-0.5">
+                  Get a gentle nudge at 11 AM to capture your day
+                </p>
+              </div>
+            </div>
+            {remindersLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Switch
+                checked={remindersEnabled}
+                onCheckedChange={handleToggleReminders}
+                disabled={togglingReminders}
+              />
+            )}
+          </div>
         </motion.div>
 
         {/* Download Memories */}
