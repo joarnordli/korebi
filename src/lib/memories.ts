@@ -123,16 +123,50 @@ export async function saveMemory(
     .upload(path, imageFile, { upsert: true, contentType: imageFile.type });
   if (uploadError) throw uploadError;
 
+  // Extract GPS coordinates from EXIF data
+  const gps = await extractGpsFromFile(imageFile);
+
   const { error } = await supabase.from("memories").upsert(
     {
       user_id: userId,
       date,
       image_url: path,
       note: note.trim() || null,
-    },
+      latitude: gps?.latitude ?? null,
+      longitude: gps?.longitude ?? null,
+    } as any,
     { onConflict: "user_id,date" }
   );
   if (error) throw error;
+}
+
+/**
+ * Computes the current streak: consecutive days with a memory,
+ * counting backward from today (or yesterday if no memory today).
+ */
+export function getStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+  const sorted = [...new Set(dates)].sort().reverse();
+  const today = getTodayKey();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = yesterday.toISOString().split("T")[0];
+
+  let streak = 0;
+  let expected = sorted[0] === today ? today : sorted[0] === yesterdayKey ? yesterdayKey : null;
+  if (!expected) return 0;
+
+  for (const d of sorted) {
+    if (d === expected) {
+      streak++;
+      const prev = new Date(expected + "T12:00:00");
+      prev.setDate(prev.getDate() - 1);
+      expected = prev.toISOString().split("T")[0];
+    } else if (d < expected!) {
+      break;
+    }
+  }
+  return streak;
 }
 
 export async function updateMemory(
