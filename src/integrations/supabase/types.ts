@@ -107,6 +107,8 @@ export type Database = {
           date: string
           id: string
           image_url: string
+          latitude: number | null
+          longitude: number | null
           note: string | null
           user_id: string
         }
@@ -115,6 +117,8 @@ export type Database = {
           date: string
           id?: string
           image_url: string
+          latitude?: number | null
+          longitude?: number | null
           note?: string | null
           user_id: string
         }
@@ -123,6 +127,8 @@ export type Database = {
           date?: string
           id?: string
           image_url?: string
+          latitude?: number | null
+          longitude?: number | null
           note?: string | null
           user_id?: string
         }
