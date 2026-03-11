@@ -58,6 +58,7 @@ serve(async (req) => {
     }
 
     // 2. Delete database rows
+    await supabaseAdmin.from("push_subscriptions").delete().eq("user_id", userId);
     await supabaseAdmin.from("memories").delete().eq("user_id", userId);
     await supabaseAdmin.from("profiles").delete().eq("user_id", userId);
     await supabaseAdmin.from("subscriptions").delete().eq("user_id", userId);
