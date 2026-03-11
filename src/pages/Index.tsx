@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, User } from "lucide-react";
+import { Camera, BookOpen, User, RefreshCw } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +8,8 @@ import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
-import { toast } from "sonner"; // used in checkout redirect
+import { toast } from "sonner";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 type Tab = "today" | "memories";
 
@@ -33,6 +34,10 @@ export default function Index() {
     }
   }, [tab]);
 
+  const { containerRef, pullDistance, refreshing } = usePullToRefresh({
+    onRefresh: refresh,
+  });
+
   // Handle checkout redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -41,7 +46,6 @@ export default function Index() {
       window.history.replaceState({}, "", "/");
     }
   }, []);
-
 
   useEffect(() => {
     refresh();
@@ -60,8 +64,35 @@ export default function Index() {
     );
   }
 
+  const pullProgress = Math.min(pullDistance / 80, 1);
+
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-background flex flex-col max-w-md mx-auto overflow-y-auto"
+      style={{ overscrollBehavior: "none" }}
+    >
+      {/* Pull-to-refresh indicator */}
+      <div
+        className="flex items-center justify-center overflow-hidden transition-[height] duration-200 ease-out"
+        style={{
+          height: pullDistance > 0 ? `${pullDistance}px` : "0px",
+          transition: pullDistance > 0 ? "none" : "height 0.3s ease-out",
+        }}
+      >
+        <div
+          className="flex items-center justify-center"
+          style={{
+            opacity: pullProgress,
+            transform: `rotate(${pullProgress * 360}deg)`,
+          }}
+        >
+          <RefreshCw
+            className={`w-5 h-5 text-muted-foreground ${refreshing ? "animate-spin" : ""}`}
+          />
+        </div>
+      </div>
+
       <header className="px-6 pt-12 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -71,17 +102,17 @@ export default function Index() {
             </h1>
           </div>
           <button
-              onClick={() => navigate("/profile")}
-              className="rounded-full"
-              title="Profile"
-            >
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
-                <AvatarFallback className="bg-secondary">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                </AvatarFallback>
-              </Avatar>
-            </button>
+            onClick={() => navigate("/profile")}
+            className="rounded-full"
+            title="Profile"
+          >
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+              <AvatarFallback className="bg-secondary">
+                <User className="w-4 h-4 text-muted-foreground" />
+              </AvatarFallback>
+            </Avatar>
+          </button>
         </div>
         <p className="font-body text-sm text-muted-foreground mt-1">
           One photo. One thought. Every day.
