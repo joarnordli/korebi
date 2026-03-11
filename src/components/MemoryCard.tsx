@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
-import { Pencil, Check, X, ImagePlus } from "lucide-react";
+import { MoreHorizontal, Check, X, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
 interface MemoryCardProps {
