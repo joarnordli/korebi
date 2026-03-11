@@ -71,6 +71,60 @@ async function validateImageFile(file: File): Promise<string> {
   return ALLOWED_TYPES[detectedType];
 }
 
+// In-memory signed URL cache: path -> { url, expiresAt }
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const SIGNED_URL_TTL = 86400; // 24 hours
+
+/** Extract storage path from a full URL or return as-is if already a path */
+function extractStoragePath(imageUrl: string): string {
+  if (!imageUrl.startsWith("http")) return imageUrl;
+  const match = imageUrl.match(/\/object\/(?:public|sign)\/memories\/(.+?)(?:\?.*)?$/);
+  if (match) return match[1];
+  const fallback = imageUrl.match(/\/memories\/(.+?)(?:\?.*)?$/);
+  if (fallback) return fallback[1];
+  return imageUrl;
+}
+
+async function batchSignUrls(paths: string[]): Promise<Map<string, string>> {
+  const now = Date.now();
+  const result = new Map<string, string>();
+  const uncached: string[] = [];
+
+  for (const p of paths) {
+    const cached = signedUrlCache.get(p);
+    if (cached && cached.expiresAt > now + 60_000) {
+      result.set(p, cached.url);
+    } else {
+      uncached.push(p);
+    }
+  }
+
+  if (uncached.length > 0) {
+    const { data, error } = await supabase.storage
+      .from("memories")
+      .createSignedUrls(uncached, SIGNED_URL_TTL);
+
+    if (!error && data) {
+      for (const item of data) {
+        if (item.signedUrl && item.path) {
+          signedUrlCache.set(item.path, {
+            url: item.signedUrl,
+            expiresAt: now + SIGNED_URL_TTL * 1000,
+          });
+          result.set(item.path, item.signedUrl);
+        }
+      }
+    }
+  }
+
+  // Fallback for any paths that didn't get signed
+  for (const p of paths) {
+    if (!result.has(p)) result.set(p, p);
+  }
+
+  return result;
+}
+
 export async function getMemories(): Promise<Memory[]> {
   const { data, error } = await supabase
     .from("memories")
@@ -78,36 +132,15 @@ export async function getMemories(): Promise<Memory[]> {
     .order("date", { ascending: false });
   if (error) throw error;
   const memories = data ?? [];
+  if (memories.length === 0) return [];
 
-  // Generate signed URLs for each memory
-  const withSignedUrls = await Promise.all(
-    memories.map(async (m) => {
-      const signedUrl = await getSignedImageUrl(m.image_url);
-      return { ...m, image_url: signedUrl };
-    })
-  );
-  return withSignedUrls;
-}
+  const paths = memories.map((m) => extractStoragePath(m.image_url));
+  const urlMap = await batchSignUrls(paths);
 
-/** Extract storage path from a full URL or return as-is if already a path */
-function extractStoragePath(imageUrl: string): string {
-  if (!imageUrl.startsWith("http")) return imageUrl;
-  // Extract path after /object/public/memories/ or /object/sign/memories/
-  const match = imageUrl.match(/\/object\/(?:public|sign)\/memories\/(.+?)(?:\?.*)?$/);
-  if (match) return match[1];
-  // Fallback: try after /memories/
-  const fallback = imageUrl.match(/\/memories\/(.+?)(?:\?.*)?$/);
-  if (fallback) return fallback[1];
-  return imageUrl;
-}
-
-async function getSignedImageUrl(imageUrl: string): Promise<string> {
-  const path = extractStoragePath(imageUrl);
-  const { data, error } = await supabase.storage
-    .from("memories")
-    .createSignedUrl(path, 3600); // 1 hour expiry
-  if (error || !data?.signedUrl) return imageUrl; // fallback
-  return data.signedUrl;
+  return memories.map((m) => {
+    const path = extractStoragePath(m.image_url);
+    return { ...m, image_url: urlMap.get(path) || m.image_url };
+  });
 }
 
 export async function saveMemory(

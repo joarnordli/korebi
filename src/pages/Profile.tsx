@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getStreak } from "@/lib/memories";
+import { useMemories } from "@/hooks/useMemories";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -59,28 +59,8 @@ export default function Profile() {
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [remindersLoading, setRemindersLoading] = useState(true);
   const [togglingReminders, setTogglingReminders] = useState(false);
-  const [streak, setStreak] = useState(0);
-  const [locations, setLocations] = useState<MemoryLocation[]>([]);
 
-  // Load streak and locations
-  useEffect(() => {
-    if (!user) return;
-    const load = async () => {
-      const { data } = await supabase
-        .from("memories")
-        .select("date, note, latitude, longitude")
-        .order("date", { ascending: false });
-      if (data) {
-        setStreak(getStreak(data.map((m) => m.date)));
-        const locs = data.filter(
-          (m): m is typeof m & { latitude: number; longitude: number } =>
-            m.latitude !== null && m.longitude !== null
-        );
-        setLocations(locs);
-      }
-    };
-    load();
-  }, [user]);
+  const { streak, locations } = useMemories();
 
   // Check current reminder status
   useEffect(() => {
