@@ -14,14 +14,14 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
+  AlertDialogCancel } from
+"@/components/ui/alert-dialog";
 import okiroLogo from "@/assets/okiro-logo.png";
 
 const VAPID_PUBLIC_KEY = "BHax1hUAtH0nKUyh3NMz3p4JTZS3pPPldR8YpI7FaLGVefw0DLCLRXoN0vJB7sGalsvR1FgJhcvicgjWMGCH9F4";
 
 function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
@@ -45,11 +45,11 @@ export default function Profile() {
   useEffect(() => {
     if (!user) return;
     const checkReminders = async () => {
-      const { data } = await supabase
-        .from("push_subscriptions")
-        .select("id, reminder_enabled")
-        .eq("user_id", user.id)
-        .limit(1);
+      const { data } = await supabase.
+      from("push_subscriptions").
+      select("id, reminder_enabled").
+      eq("user_id", user.id).
+      limit(1);
       setRemindersEnabled(data && data.length > 0 && data[0].reminder_enabled);
       setRemindersLoading(false);
     };
@@ -82,7 +82,7 @@ export default function Profile() {
         // Subscribe to push
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
 
         const subJson = subscription.toJSON();
@@ -96,7 +96,7 @@ export default function Profile() {
             p256dh: subJson.keys!.p256dh!,
             auth: subJson.keys!.auth!,
             timezone,
-            reminder_enabled: true,
+            reminder_enabled: true
           },
           { onConflict: "user_id,endpoint" }
         );
@@ -110,14 +110,14 @@ export default function Profile() {
           const subscription = await registration.pushManager.getSubscription();
           if (subscription) await subscription.unsubscribe();
         } catch {
-          // Continue even if unsubscribe fails
-        }
 
-        // Remove from database
-        await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("user_id", user!.id);
+
+          // Continue even if unsubscribe fails
+        } // Remove from database
+        await supabase.
+        from("push_subscriptions").
+        delete().
+        eq("user_id", user!.id);
 
         setRemindersEnabled(false);
         toast.success("Daily reminders disabled.");
@@ -158,10 +158,10 @@ export default function Profile() {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const { data: memories, error } = await supabase
-        .from("memories")
-        .select("*")
-        .order("date", { ascending: true });
+      const { data: memories, error } = await supabase.
+      from("memories").
+      select("*").
+      order("date", { ascending: true });
       if (error) throw error;
       if (!memories || memories.length === 0) {
         toast.info("No memories to download yet.");
@@ -174,7 +174,7 @@ export default function Profile() {
       const metadata = memories.map((m) => ({
         date: m.date,
         note: m.note,
-        created_at: m.created_at,
+        created_at: m.created_at
       }));
       zip.file("memories.json", JSON.stringify(metadata, null, 2));
 
@@ -187,10 +187,10 @@ export default function Profile() {
           const filename = `${memory.date}${memory.note ? " - " + memory.note.slice(0, 40).replace(/[/\\?%*:|"<>]/g, "") : ""}.${ext}`;
           zip.file(filename, blob);
         } catch {
-          // Skip failed downloads
-        }
-      }
 
+
+          // Skip failed downloads
+        }}
       const content = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(content);
       const a = document.createElement("a");
@@ -221,7 +221,7 @@ export default function Profile() {
     }
   };
 
-  const trialProgress = trialDaysLeft !== null ? Math.max(0, Math.min(100, ((7 - trialDaysLeft) / 7) * 100)) : 0;
+  const trialProgress = trialDaysLeft !== null ? Math.max(0, Math.min(100, (7 - trialDaysLeft) / 7 * 100)) : 0;
   const isPaidSubscriber = subscribed && !isTrialing;
 
   return (
@@ -229,8 +229,8 @@ export default function Profile() {
       <header className="px-6 pt-12 pb-6">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
+          className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+          
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
@@ -256,20 +256,20 @@ export default function Profile() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="bg-card rounded-2xl shadow-card p-5"
-        >
+          className="bg-card rounded-2xl shadow-card p-5">
+          
           <div className="flex items-center gap-2 mb-3">
             <Crown className="w-4 h-4 text-primary" />
             <h2 className="font-display text-sm font-bold text-foreground">Subscription</h2>
           </div>
 
-          {subscriptionLoading ? (
-            <div className="flex items-center gap-2 py-2">
+          {subscriptionLoading ?
+          <div className="flex items-center gap-2 py-2">
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
               <span className="font-body text-sm text-muted-foreground">Checking status…</span>
-            </div>
-          ) : isTrialing ? (
-            <div>
+            </div> :
+          isTrialing ?
+          <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-body text-sm text-foreground">Free trial</span>
                 <span className="font-body text-xs text-muted-foreground">
@@ -278,54 +278,54 @@ export default function Profile() {
               </div>
               <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${trialProgress}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="h-full bg-primary rounded-full"
-                />
+                initial={{ width: 0 }}
+                animate={{ width: `${trialProgress}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="h-full bg-primary rounded-full" />
+              
               </div>
               <p className="font-body text-xs text-muted-foreground mt-2">
                 After your trial, it's 7 NOK/week to continue.
               </p>
-            </div>
-          ) : isPaidSubscriber ? (
-            <div>
+            </div> :
+          isPaidSubscriber ?
+          <div>
               <div className="flex items-center gap-2 mb-1">
                 <Check className="w-4 h-4 text-primary" />
                 <span className="font-body text-sm text-foreground font-medium">Active subscription</span>
               </div>
               <p className="font-body text-xs text-muted-foreground">
-                7 NOK/week · {subscriptionEnd
-                  ? `Renews ${new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-                  : ""}
+                7 NOK/week · {subscriptionEnd ?
+              `Renews ${new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` :
+              ""}
               </p>
               <button
-                onClick={handleManageSubscription}
-                disabled={managingSubscription}
-                className="mt-3 w-full py-2.5 rounded-xl border border-border bg-background font-body text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60"
-              >
+              onClick={handleManageSubscription}
+              disabled={managingSubscription}
+              className="mt-3 w-full py-2.5 rounded-xl border border-border bg-background font-body text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+              
                 {managingSubscription ? <Loader2 className="w-4 h-4 animate-spin" /> : "Manage subscription"}
               </button>
-            </div>
-          ) : (
-            <div>
+            </div> :
+
+          <div>
               <p className="font-body text-sm text-muted-foreground mb-3">
                 Your free trial has ended. Subscribe to keep using Okiro.
               </p>
               <button
-                onClick={handleStartSubscription}
-                disabled={managingSubscription}
-                className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 shadow-card disabled:opacity-60"
-              >
-                {managingSubscription ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                  <>
+              onClick={handleStartSubscription}
+              disabled={managingSubscription}
+              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 shadow-card disabled:opacity-60">
+              
+                {managingSubscription ? <Loader2 className="w-4 h-4 animate-spin" /> :
+              <>
                     <Crown className="w-4 h-4" />
                     Subscribe — 7 NOK/week
                   </>
-                )}
+              }
               </button>
             </div>
-          )}
+          }
         </motion.div>
 
         {/* Daily Reminders */}
@@ -333,27 +333,27 @@ export default function Profile() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
-          className="bg-card rounded-2xl shadow-card p-5"
-        >
+          className="bg-card rounded-2xl shadow-card p-5">
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-primary" />
               <div>
                 <h2 className="font-display text-sm font-bold text-foreground">Daily reminders</h2>
                 <p className="font-body text-xs text-muted-foreground mt-0.5">
-                  Get a daily reminder between 10 AM and 10 PM to capture your moment
+                  Get a daily reminder to capture your moment
                 </p>
               </div>
             </div>
-            {remindersLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-            ) : (
-              <Switch
-                checked={remindersEnabled}
-                onCheckedChange={handleToggleReminders}
-                disabled={togglingReminders}
-              />
-            )}
+            {remindersLoading ?
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> :
+
+            <Switch
+              checked={remindersEnabled}
+              onCheckedChange={handleToggleReminders}
+              disabled={togglingReminders} />
+
+            }
           </div>
         </motion.div>
 
@@ -362,8 +362,8 @@ export default function Profile() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-card rounded-2xl shadow-card p-5"
-        >
+          className="bg-card rounded-2xl shadow-card p-5">
+          
           <div className="flex items-center gap-2 mb-2">
             <Download className="w-4 h-4 text-primary" />
             <h2 className="font-display text-sm font-bold text-foreground">Your data</h2>
@@ -374,19 +374,19 @@ export default function Profile() {
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="w-full py-2.5 rounded-xl border border-border bg-background font-body text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60"
-          >
-            {downloading ? (
-              <>
+            className="w-full py-2.5 rounded-xl border border-border bg-background font-body text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+            
+            {downloading ?
+            <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Preparing download…
-              </>
-            ) : (
-              <>
+              </> :
+
+            <>
                 <Download className="w-4 h-4" />
                 Download all memories
               </>
-            )}
+            }
           </button>
         </motion.div>
 
@@ -394,12 +394,12 @@ export default function Profile() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
+          transition={{ delay: 0.15 }}>
+          
           <button
             onClick={signOut}
-            className="w-full py-3 rounded-xl border border-border bg-card font-body text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/5 transition-colors shadow-card"
-          >
+            className="w-full py-3 rounded-xl border border-border bg-card font-body text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/5 transition-colors shadow-card">
+            
             <LogOut className="w-4 h-4" />
             Sign out
           </button>
@@ -410,13 +410,13 @@ export default function Profile() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="pt-4"
-        >
+          className="pt-4">
+          
           <p className="font-body text-xs text-muted-foreground mb-2 uppercase tracking-wider">Danger zone</p>
           <button
             onClick={() => setDeleteDialogOpen(true)}
-            className="w-full py-3 rounded-xl border border-destructive/30 bg-card font-body text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/5 transition-colors"
-          >
+            className="w-full py-3 rounded-xl border border-destructive/30 bg-card font-body text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/5 transition-colors">
+            
             <Trash2 className="w-4 h-4" />
             Delete account
           </button>
@@ -453,8 +453,8 @@ export default function Profile() {
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder="DELETE"
               disabled={deleting}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-destructive/30 disabled:opacity-60"
-            />
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-destructive/30 disabled:opacity-60" />
+            
           </div>
           <AlertDialogFooter className="flex-row gap-2">
             <AlertDialogCancel disabled={deleting} className="flex-1 rounded-xl font-body text-sm">
@@ -463,14 +463,14 @@ export default function Profile() {
             <button
               onClick={handleDeleteAccount}
               disabled={deleteConfirmText !== "DELETE" || deleting}
-              className="flex-1 py-2 rounded-xl bg-destructive text-destructive-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
-            >
+              className="flex-1 py-2 rounded-xl bg-destructive text-destructive-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity">
+              
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {deleting ? "Deleting…" : "Delete forever"}
             </button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }
