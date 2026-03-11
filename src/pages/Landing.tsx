@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { Camera, BookOpen, Sparkles, ArrowRight, Clock, CreditCard } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Camera, BookOpen, Sparkles, ArrowRight, Clock, CreditCard, Download, Share, Plus, MoreVertical, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import okiroLogo from "@/assets/okiro-logo.png";
 
@@ -100,6 +101,16 @@ export default function Landing() {
           ))}
         </motion.div>
 
+        {/* Install Guide */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="w-full max-w-md mb-14"
+        >
+          <InstallGuide />
+        </motion.div>
+
         {/* Pricing */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -152,5 +163,120 @@ export default function Landing() {
         </footer>
       </main>
     </div>
+  );
+}
+
+function InstallGuide() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-card rounded-2xl shadow-card overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-4 p-5 text-left"
+      >
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Smartphone className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-sm font-bold text-foreground">
+            Get the app on your phone
+          </h3>
+          <p className="font-body text-xs text-muted-foreground mt-0.5">
+            Add Okiro to your home screen — no app store needed
+          </p>
+        </div>
+        {open ? (
+          <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 space-y-5">
+              <div className="h-px bg-border" />
+
+              {/* iPhone / Safari */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="font-body text-xs font-semibold text-foreground bg-secondary px-2 py-0.5 rounded-md">
+                    iPhone · Safari
+                  </span>
+                </div>
+                <ol className="space-y-2.5">
+                  <InstallStep
+                    step={1}
+                    icon={<Share className="w-3.5 h-3.5" />}
+                    text='Tap the Share button at the bottom of Safari'
+                  />
+                  <InstallStep
+                    step={2}
+                    icon={<Plus className="w-3.5 h-3.5" />}
+                    text='Scroll down and tap "Add to Home Screen"'
+                  />
+                  <InstallStep
+                    step={3}
+                    icon={<Download className="w-3.5 h-3.5" />}
+                    text='Tap "Add" — Okiro will appear on your home screen'
+                  />
+                </ol>
+              </div>
+
+              {/* Android / Chrome */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="font-body text-xs font-semibold text-foreground bg-secondary px-2 py-0.5 rounded-md">
+                    Android · Chrome
+                  </span>
+                </div>
+                <ol className="space-y-2.5">
+                  <InstallStep
+                    step={1}
+                    icon={<MoreVertical className="w-3.5 h-3.5" />}
+                    text='Tap the ⋮ menu in the top right'
+                  />
+                  <InstallStep
+                    step={2}
+                    icon={<Download className="w-3.5 h-3.5" />}
+                    text='Tap "Add to Home screen" or "Install app"'
+                  />
+                  <InstallStep
+                    step={3}
+                    icon={<Plus className="w-3.5 h-3.5" />}
+                    text='Confirm — Okiro opens like a real app'
+                  />
+                </ol>
+              </div>
+
+              <p className="font-body text-xs text-muted-foreground leading-relaxed text-center pt-1">
+                Once added, Okiro opens full-screen with its own icon — just like a native app.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function InstallStep({ step, icon, text }: { step: number; icon: React.ReactNode; text: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 text-primary">
+        {icon}
+      </span>
+      <span className="font-body text-sm text-muted-foreground leading-snug">
+        <span className="font-medium text-foreground">Step {step}:</span> {text}
+      </span>
+    </li>
   );
 }
