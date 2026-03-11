@@ -51,6 +51,29 @@ export default function Index() {
     refresh();
   }, []);
 
+  // Swipe to switch tabs
+  const swipeStartX = useRef(0);
+  const swipeStartY = useRef(0);
+  const swiping = useRef(false);
+
+  const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
+    swiping.current = true;
+  }, []);
+
+  const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
+    if (!swiping.current) return;
+    swiping.current = false;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    const dy = e.changedTouches[0].clientY - swipeStartY.current;
+    // Only trigger if horizontal swipe is dominant and exceeds threshold
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0 && tab === "today") setTab("memories");
+      if (dx > 0 && tab === "memories") setTab("today");
+    }
+  }, [tab]);
+
   const handleSaved = () => {
     refresh();
     setTab("memories");
