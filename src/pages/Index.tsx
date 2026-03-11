@@ -160,7 +160,7 @@ export default function Index() {
               <Icon className="w-4 h-4" />
               {label}
               {badge && (
-                <span className="w-2 h-2 rounded-full bg-accent absolute top-2 right-[calc(50%-28px)]" />
+                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
               )}
             </button>
           ))}
