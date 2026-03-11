@@ -16,6 +16,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
