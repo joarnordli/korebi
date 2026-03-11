@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import okiroLogo from "@/assets/okiro-logo.png";
 
 export default function Profile() {
@@ -13,6 +22,9 @@ export default function Profile() {
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
   const [managingSubscription, setManagingSubscription] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const handleManageSubscription = async () => {
     setManagingSubscription(true);
@@ -53,11 +65,9 @@ export default function Profile() {
         return;
       }
 
-      // Dynamic import JSZip
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
 
-      // Add a metadata JSON
       const metadata = memories.map((m) => ({
         date: m.date,
         note: m.note,
@@ -65,7 +75,6 @@ export default function Profile() {
       }));
       zip.file("memories.json", JSON.stringify(metadata, null, 2));
 
-      // Download each image and add to zip
       for (const memory of memories) {
         try {
           const response = await fetch(memory.image_url);
@@ -91,6 +100,21 @@ export default function Profile() {
       toast.error(err.message || "Failed to download memories");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      await signOut();
+      navigate("/welcome", { replace: true });
+      toast.success("Your account and all data have been permanently deleted.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete account");
+      setDeleting(false);
     }
   };
 
@@ -248,6 +272,23 @@ export default function Profile() {
             Sign out
           </button>
         </motion.div>
+
+        {/* Danger Zone */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="pt-4"
+        >
+          <p className="font-body text-xs text-muted-foreground mb-2 uppercase tracking-wider">Danger zone</p>
+          <button
+            onClick={() => setDeleteDialogOpen(true)}
+            className="w-full py-3 rounded-xl border border-destructive/30 bg-card font-body text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/5 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete account
+          </button>
+        </motion.div>
       </div>
 
       <footer className="px-6 py-6 text-center">
@@ -255,6 +296,49 @@ export default function Profile() {
           © {new Date().getFullYear()} Okiro
         </p>
       </footer>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        if (!deleting) {
+          setDeleteDialogOpen(open);
+          if (!open) setDeleteConfirmText("");
+        }
+      }}>
+        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg text-foreground">Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
+              This will <strong className="text-foreground">permanently delete</strong> all your memories, photos, notes, and account data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <label className="font-body text-xs text-muted-foreground block mb-1.5">
+              Type <strong className="text-foreground">DELETE</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              disabled={deleting}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-destructive/30 disabled:opacity-60"
+            />
+          </div>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel disabled={deleting} className="flex-1 rounded-xl font-body text-sm">
+              Cancel
+            </AlertDialogCancel>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmText !== "DELETE" || deleting}
+              className="flex-1 py-2 rounded-xl bg-destructive text-destructive-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {deleting ? "Deleting…" : "Delete forever"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
