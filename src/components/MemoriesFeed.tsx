@@ -23,7 +23,7 @@ export default function MemoriesFeed({ memories, onUpdated }: MemoriesFeedProps)
   }
 
   return (
-    <div className="px-4 pb-8 space-y-4">
+    <div className="px-4 pb-24 space-y-4">
       {memories.map((memory, i) => (
         <MemoryCard key={memory.id} memory={memory} index={i} onUpdated={onUpdated} />
       ))}
