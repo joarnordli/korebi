@@ -49,9 +49,7 @@ export default function Landing() {
           transition={{ duration: 0.5 }}
           className="max-w-md text-center mt-12 mb-14"
         >
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-            <img src={okiroLogo} alt="" className="w-12 h-12" />
-          </div>
+          <img src={okiroLogo} alt="" className="w-16 h-16 mx-auto mb-6" />
           <h1 className="font-display text-4xl font-bold text-foreground tracking-tight leading-tight mb-4">
             One moment,
             <br />
