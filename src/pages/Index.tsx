@@ -116,55 +116,65 @@ export default function Index() {
         </div>
       </div>
 
-      <header className="px-6 pt-12 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
-            <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
-              Okiro
-            </h1>
-          </div>
-          <button
-            onClick={() => navigate("/profile")}
-            className="rounded-full"
-            title="Profile"
-          >
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
-              <AvatarFallback className="bg-secondary">
-                <User className="w-4 h-4 text-muted-foreground" />
-              </AvatarFallback>
-            </Avatar>
-          </button>
-        </div>
-        <p className="font-body text-sm text-muted-foreground mt-1">
-          One photo. One thought. Every day.
-        </p>
-      </header>
-
-      <div className="px-6 pb-2">
-        <div className="flex bg-secondary rounded-xl p-1">
-          {[
-            { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
-            { key: "memories" as Tab, label: "Memories", icon: BookOpen },
-          ].map(({ key, label, icon: Icon, badge }) => (
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/70">
+        <header className="px-6 pt-12 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
+              <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
+                Okiro
+              </h1>
+            </div>
             <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-body text-sm font-medium transition-all relative ${
-                tab === key
-                  ? "bg-background text-foreground shadow-card"
-                  : "text-muted-foreground"
-              }`}
+              onClick={() => navigate("/profile")}
+              className="rounded-full"
+              title="Profile"
             >
-              <Icon className="w-4 h-4" />
-              {label}
-              {badge && (
-                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
-              )}
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
+                <AvatarFallback className="bg-secondary">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
             </button>
-          ))}
+          </div>
+          <p className="font-body text-sm text-muted-foreground mt-1">
+            One photo. One thought. Every day.
+          </p>
+        </header>
+
+        <div className="px-6 pb-2">
+          <div className="flex bg-secondary rounded-xl p-1">
+            {[
+              { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
+              { key: "memories" as Tab, label: "Memories", icon: BookOpen },
+            ].map(({ key, label, icon: Icon, badge }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-body text-sm font-medium transition-all relative ${
+                  tab === key
+                    ? "bg-background text-foreground shadow-card"
+                    : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+                {badge && (
+                  <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Fade-out edge */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none translate-y-full"
+          style={{
+            background: "linear-gradient(to bottom, hsl(var(--background) / 0.7), transparent)",
+          }}
+        />
       </div>
 
       <div
