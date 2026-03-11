@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, BookOpen, User, RefreshCw } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getMemories, hasTodayMemory, Memory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
@@ -10,6 +9,7 @@ import MemoriesFeed from "@/components/MemoriesFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
 import { toast } from "sonner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useMemories } from "@/hooks/useMemories";
 
 type Tab = "today" | "memories";
 
@@ -17,22 +17,12 @@ export default function Index() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
-  const [memories, setMemories] = useState<Memory[]>([]);
-  const [todayCaptured, setTodayCaptured] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { memories, todayCaptured, loading, refresh } = useMemories();
 
-  const refresh = useCallback(async () => {
-    try {
-      const [mems, hasToday] = await Promise.all([getMemories(), hasTodayMemory()]);
-      setMemories(mems);
-      setTodayCaptured(hasToday);
-      if (hasToday && tab === "today") setTab("memories");
-    } catch {
-
-      // silently fail
-    } finally {setLoading(false);
-    }
-  }, [tab]);
+  // Auto-switch to memories tab if today is already captured
+  useEffect(() => {
+    if (todayCaptured && tab === "today") setTab("memories");
+  }, [todayCaptured]);
 
   const { containerRef, pullDistance, refreshing } = usePullToRefresh({
     onRefresh: refresh
