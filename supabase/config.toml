@@ -5,3 +5,5 @@ project_id = "evjpvgsmrojbnccgkoxv"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = false
+  [functions.delete-account]
+    verify_jwt = false
