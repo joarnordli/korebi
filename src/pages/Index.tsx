@@ -37,9 +37,7 @@ export default function Index() {
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  // No manual refresh on mount needed — React Query handles it
 
   // Swipe to switch tabs
   const swipeStartX = useRef(0);
