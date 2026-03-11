@@ -7,7 +7,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const TARGET_HOUR = 11; // 11 AM local time
+const MIN_HOUR = 10; // 10 AM
+const MAX_HOUR = 21; // 9 PM (last possible hour, so notifications arrive 10 AM – 9:59 PM)
+
+// Deterministic random hour for a user on a given date
+async function getRandomHourForUser(userId: string, dateStr: string): Promise<number> {
+  const data = new TextEncoder().encode(userId + dateStr);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = new Uint8Array(hashBuffer);
+  const value = hashArray[0]; // 0-255
+  return MIN_HOUR + (value % (MAX_HOUR - MIN_HOUR + 1)); // 10-21
+}
 
 // Convert base64url to Uint8Array
 function base64urlToUint8Array(base64url: string): Uint8Array {
@@ -153,12 +163,18 @@ serve(async (req) => {
       });
     }
 
-    // Filter to users whose local time is the target hour
-    const eligible = subscriptions.filter(
-      (sub) => getCurrentHourInTimezone(sub.timezone) === TARGET_HOUR
+    // Filter to users whose local time matches their deterministic random hour for today
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const eligibleChecks = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const currentHour = getCurrentHourInTimezone(sub.timezone);
+        const targetHour = await getRandomHourForUser(sub.user_id, today);
+        return { sub, eligible: currentHour === targetHour };
+      })
     );
+    const eligible = eligibleChecks.filter((e) => e.eligible).map((e) => e.sub);
 
-    console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible at hour ${TARGET_HOUR}`);
+    console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible this hour`);
 
     const messages = [
       "Time to capture today's moment ✨",
