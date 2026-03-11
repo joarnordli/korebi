@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { extractGpsFromFile } from "@/lib/exif";
 
 export interface Memory {
   id: string;
@@ -7,6 +8,8 @@ export interface Memory {
   note: string | null;
   created_at: string;
   user_id: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 const ALLOWED_TYPES: Record<string, string> = {
