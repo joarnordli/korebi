@@ -17,7 +17,7 @@ export default function Index() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
-  const { memories, todayCaptured, loading, refresh } = useMemories();
+  const { memories, todayCaptured, streak, loading, refresh } = useMemories();
 
   // Auto-switch to memories tab if today is already captured
   useEffect(() => {
