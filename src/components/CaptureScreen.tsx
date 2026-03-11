@@ -57,24 +57,44 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
         className="hidden"
         onChange={handleFile}
       />
+      <input
+        ref={libraryRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFile}
+      />
 
       <AnimatePresence mode="wait">
         {!preview ? (
-          <motion.button
+          <motion.div
             key="upload"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            onClick={() => fileRef.current?.click()}
-            className="w-full aspect-[3/4] max-w-xs rounded-2xl border-2 border-dashed border-primary/30 bg-card flex flex-col items-center justify-center gap-4 shadow-card transition-colors hover:border-primary/50 active:bg-secondary"
+            className="w-full max-w-xs flex flex-col items-center gap-4"
           >
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Camera className="w-7 h-7 text-primary" />
+            <div className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-primary/30 bg-card flex flex-col items-center justify-center gap-6 shadow-card">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="flex flex-col items-center gap-2 active:opacity-70 transition-opacity"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-primary" />
+                </div>
+                <span className="text-foreground font-body text-sm font-medium">Take Photo</span>
+              </button>
+              <button
+                onClick={() => libraryRef.current?.click()}
+                className="flex flex-col items-center gap-2 active:opacity-70 transition-opacity"
+              >
+                <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center">
+                  <Image className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <span className="text-foreground font-body text-sm font-medium">From Library</span>
+              </button>
             </div>
-            <span className="text-muted-foreground font-body text-sm">
-              Tap to add a photo
-            </span>
-          </motion.button>
+          </motion.div>
         ) : (
           <motion.div
             key="preview"
