@@ -163,12 +163,18 @@ serve(async (req) => {
       });
     }
 
-    // Filter to users whose local time is the target hour
-    const eligible = subscriptions.filter(
-      (sub) => getCurrentHourInTimezone(sub.timezone) === TARGET_HOUR
+    // Filter to users whose local time matches their deterministic random hour for today
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const eligibleChecks = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const currentHour = getCurrentHourInTimezone(sub.timezone);
+        const targetHour = await getRandomHourForUser(sub.user_id, today);
+        return { sub, eligible: currentHour === targetHour };
+      })
     );
+    const eligible = eligibleChecks.filter((e) => e.eligible).map((e) => e.sub);
 
-    console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible at hour ${TARGET_HOUR}`);
+    console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible this hour`);
 
     const messages = [
       "Time to capture today's moment ✨",

@@ -341,7 +341,7 @@ export default function Profile() {
               <div>
                 <h2 className="font-display text-sm font-bold text-foreground">Daily reminders</h2>
                 <p className="font-body text-xs text-muted-foreground mt-0.5">
-                  Get a gentle nudge at 11 AM to capture your day
+                  Get a daily reminder between 10 AM and 10 PM to capture your moment
                 </p>
               </div>
             </div>
