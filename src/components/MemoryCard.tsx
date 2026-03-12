@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
