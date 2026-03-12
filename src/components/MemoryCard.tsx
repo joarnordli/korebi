@@ -63,9 +63,10 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={hasMounted.current ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.08, duration: 0.4 }}
+      transition={{ delay: hasMounted.current ? 0 : index * 0.08, duration: 0.4 }}
+      layout
       className="bg-card rounded-2xl shadow-card overflow-hidden p-2"
     >
       <div className="relative">
