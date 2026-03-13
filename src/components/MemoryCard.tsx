@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
 import { useAuth } from "@/hooks/useAuth";
-import { MoreHorizontal, Check, X, ImagePlus } from "lucide-react";
+import { MoreHorizontal, Check, X, ImagePlus, Pencil, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface MemoryCardProps {
   memory: Memory;
@@ -18,6 +19,8 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
   const [newImage, setNewImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const hasMounted = useRef(false);
 
@@ -61,6 +64,41 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
     setImagePreview(null);
   };
 
+  const handleShare = async () => {
+    setMenuOpen(false);
+    setSharing(true);
+    try {
+      const response = await fetch(memory.image_url);
+      const blob = await response.blob();
+      const ext = blob.type.split("/")[1] || "jpg";
+      const file = new File([blob], `okiro-memory.${ext}`, { type: blob.type });
+
+      const dateLabel = formatDate(memory.date);
+      const text = memory.note
+        ? `A memory from ${dateLabel}\n\n${memory.note}`
+        : `A memory from ${dateLabel}`;
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+      } else {
+        // Fallback: download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `okiro-memory.${ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Image downloaded");
+      }
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        toast.error("Failed to share");
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <motion.div
       initial={hasMounted.current ? false : { opacity: 0, y: 20 }}
@@ -101,12 +139,30 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
             {formatDate(memory.date)}
           </p>
           {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="p-1"
-            >
-              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-            </button>
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <button className="p-1">
+                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-36 p-1.5">
+                <button
+                  onClick={() => { setMenuOpen(false); setEditing(true); }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 font-body text-sm text-foreground hover:bg-accent transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={handleShare}
+                  disabled={sharing}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 font-body text-sm text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  {sharing ? "Sharing…" : "Share"}
+                </button>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
 
