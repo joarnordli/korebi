@@ -64,6 +64,15 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
     setImagePreview(null);
   };
 
+  const downloadBlob = (blob: Blob, ext: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `okiro-memory.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleShare = async () => {
     setMenuOpen(false);
     setSharing(true);
@@ -79,16 +88,17 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
         : `A memory from ${dateLabel}`;
 
       if (navigator.canShare?.({ files: [file] })) {
+        // Tier 1: Full native share with image + text (mobile)
         await navigator.share({ files: [file], text });
+      } else if (navigator.share) {
+        // Tier 2: Desktop with share API — download image + share text
+        downloadBlob(blob, ext);
+        await navigator.share({ text });
       } else {
-        // Fallback: download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `okiro-memory.${ext}`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("Image downloaded");
+        // Tier 3: No share API — download image + copy text to clipboard
+        downloadBlob(blob, ext);
+        await navigator.clipboard.writeText(text);
+        toast.success("Image downloaded & caption copied");
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
