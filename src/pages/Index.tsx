@@ -14,7 +14,7 @@ import { useMemories } from "@/hooks/useMemories";
 type Tab = "today" | "memories";
 
 export default function Index() {
-  const { user } = useAuth();
+  const { user, checkSubscription } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const { memories, todayCaptured, streak, loading, refresh } = useMemories();
