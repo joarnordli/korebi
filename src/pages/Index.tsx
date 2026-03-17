@@ -33,9 +33,10 @@ export default function Index() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
       toast.success("Subscription activated!");
+      checkSubscription();
       window.history.replaceState({}, "", "/");
     }
-  }, []);
+  }, [checkSubscription]);
 
   // No manual refresh on mount needed — React Query handles it
 
