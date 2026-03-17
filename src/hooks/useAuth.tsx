@@ -38,19 +38,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
 
+  // Deduplicate concurrent calls
+  const checkInFlight = useRef<Promise<void> | null>(null);
+
   const checkSubscription = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("check-subscription");
-      if (error) throw error;
-      setSubscribed(data?.subscribed ?? false);
-      setIsTrialing(data?.is_trialing ?? false);
-      setTrialDaysLeft(data?.trial_days_left ?? null);
-      setSubscriptionEnd(data?.subscription_end ?? null);
-    } catch {
-      setSubscribed(false);
-    } finally {
-      setSubscriptionLoading(false);
-    }
+    if (checkInFlight.current) return checkInFlight.current;
+    const promise = (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("check-subscription");
+        if (error) throw error;
+        setSubscribed(data?.subscribed ?? false);
+        setIsTrialing(data?.is_trialing ?? false);
+        setTrialDaysLeft(data?.trial_days_left ?? null);
+        setSubscriptionEnd(data?.subscription_end ?? null);
+      } catch {
+        setSubscribed(false);
+      } finally {
+        setSubscriptionLoading(false);
+        checkInFlight.current = null;
+      }
+    })();
+    checkInFlight.current = promise;
+    return promise;
   }, []);
 
   useEffect(() => {
