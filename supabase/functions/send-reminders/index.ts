@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { buildPushHTTPRequest } from "npm:pushforge@2.0.1";
+import { buildPushHTTPRequest } from "npm:@pushforge/builder@2.0.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +30,32 @@ function getCurrentHourInTimezone(timezone: string): number {
   } catch {
     return -1;
   }
+}
+
+// Convert raw VAPID keys (base64url) to JWK for PushForge
+function vapidKeysToJWK(publicKeyBase64url: string, privateKeyBase64url: string) {
+  // The public key is 65 bytes uncompressed: 0x04 || x (32 bytes) || y (32 bytes)
+  const pubBytes = base64urlDecode(publicKeyBase64url);
+  const x = base64urlEncode(pubBytes.slice(1, 33));
+  const y = base64urlEncode(pubBytes.slice(33, 65));
+  const d = privateKeyBase64url;
+
+  return { kty: "EC", crv: "P-256", x, y, d };
+}
+
+function base64urlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = base64.length % 4 === 0 ? "" : "=".repeat(4 - (base64.length % 4));
+  const binary = atob(base64 + pad);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function base64urlEncode(bytes: Uint8Array): string {
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 const messages = [
@@ -63,6 +89,9 @@ serve(async (req) => {
       });
     }
 
+    const privateJWK = vapidKeysToJWK(vapidPublicKey, vapidPrivateKey);
+    console.log("[SEND-REMINDERS] VAPID JWK prepared");
+
     const { data: subscriptions, error } = await supabaseAdmin
       .from("push_subscriptions")
       .select("*")
@@ -88,7 +117,7 @@ serve(async (req) => {
 
     console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible this hour`);
     eligibleChecks.forEach((e) => {
-      console.log(`[SEND-REMINDERS] User ${e.sub.user_id}: currentHour=${e.currentHour}, targetHour=${e.targetHour}, eligible=${e.eligible}`);
+      console.log(`[SEND-REMINDERS] User ${e.sub.user_id}: tz=${e.sub.timezone} currentHour=${e.currentHour}, targetHour=${e.targetHour}, eligible=${e.eligible}`);
     });
 
     let sent = 0;
@@ -100,15 +129,10 @@ serve(async (req) => {
       await new Promise((resolve) => setTimeout(resolve, delay));
 
       const message = messages[Math.floor(Math.random() * messages.length)];
-      const payload = JSON.stringify({
-        title: "Okiro",
-        body: message,
-        url: "/",
-      });
 
       try {
         const { endpoint, headers, body } = await buildPushHTTPRequest({
-          payload,
+          privateJWK,
           subscription: {
             endpoint: sub.endpoint,
             keys: {
@@ -116,12 +140,14 @@ serve(async (req) => {
               auth: sub.auth,
             },
           },
-          vapid: {
-            subject: "mailto:hello@okiroapp.com",
-            publicKey: vapidPublicKey,
-            privateKey: vapidPrivateKey,
+          message: {
+            payload: {
+              title: "Okiro",
+              body: message,
+              url: "/",
+            },
+            adminContact: "mailto:hello@okiroapp.com",
           },
-          ttl: 86400,
         });
 
         const response = await fetch(endpoint, {
@@ -130,7 +156,7 @@ serve(async (req) => {
           body,
         });
 
-        if (response.ok) {
+        if (response.ok || response.status === 201) {
           sent++;
           console.log(`[SEND-REMINDERS] Sent to ${sub.user_id} (status ${response.status})`);
         } else if (response.status === 410 || response.status === 404) {
