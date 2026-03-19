@@ -18,6 +18,18 @@ export default function Index() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const { memories, todayCaptured, streak, loading, refresh } = useMemories();
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(180);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setHeaderHeight(entry.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Auto-switch to memories tab if today is already captured
   useEffect(() => {
