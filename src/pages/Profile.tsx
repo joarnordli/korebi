@@ -245,7 +245,7 @@ export default function Profile() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
+    <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
       <header className="px-6 pt-12 pb-6">
         <button
           onClick={() => navigate("/")}
