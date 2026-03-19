@@ -15,18 +15,27 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
   const { user } = useAuth();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [gps, setGps] = useState<{ latitude: number; longitude: number } | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(file);
+    try {
+      // Extract GPS from original before compression strips EXIF
+      const coords = await extractGpsFromFile(file);
+      setGps(coords);
+      const compressed = await compressImage(file);
+      setImageFile(compressed);
+      const reader = new FileReader();
+      reader.onload = () => setPreview(reader.result as string);
+      reader.readAsDataURL(compressed);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process image");
+    }
   };
 
   const handleSave = async () => {
