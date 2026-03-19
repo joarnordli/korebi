@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
 import { compressImage } from "@/lib/image-compress";
