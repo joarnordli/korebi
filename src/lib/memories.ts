@@ -195,10 +195,23 @@ export async function saveMemory(
   gps?: { latitude: number; longitude: number } | null
 ): Promise<void> {
   const ext = await validateImageFile(imageFile);
+
+  // Encrypt the image blob before upload
+  const salt = await getEncryptionSalt();
+  const key = await deriveKey(userId, salt);
+  const { encrypted, iv } = await encryptBlob(imageFile, key);
+
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const encryptedFile = new File([encrypted], `memory.enc`, {
+    type: "application/octet-stream",
+  });
+
   const { error: uploadError } = await supabase.storage
     .from("memories")
-    .upload(path, imageFile, { upsert: true, contentType: imageFile.type });
+    .upload(path, encryptedFile, {
+      upsert: true,
+      contentType: "application/octet-stream",
+    });
   if (uploadError) throw uploadError;
 
   // Use provided GPS coords (extracted before compression) or try EXIF as fallback
@@ -212,6 +225,7 @@ export async function saveMemory(
       note: note.trim() || null,
       latitude: coords?.latitude ?? null,
       longitude: coords?.longitude ?? null,
+      encryption_iv: ivToBase64(iv),
     } as any,
     { onConflict: "user_id,date" }
   );
