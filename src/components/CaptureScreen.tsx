@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { Camera, Image, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { saveMemory, getTodayKey } from "@/lib/memories";
+import { compressImage } from "@/lib/image-compress";
+import { extractGpsFromFile } from "@/lib/exif";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
