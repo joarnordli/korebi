@@ -1,29 +1,36 @@
 
 
-## Problem
+# Client-Side Image Compression (WebP)
 
-From the screenshot, the header area (logo, tagline, tab switcher) still responds to touch/scroll gestures independently. The outer container uses `overflow-hidden` but on iOS, touch events on the header area can still propagate and cause scroll-like behavior on the page body or the outer container.
+## Overview
+Add a compression utility that resizes and converts images to WebP before upload. This will reduce typical photo sizes from 3-8MB to ~100-250KB, dramatically improving load times.
 
-## Root Cause
+## Changes
 
-1. The outer `h-screen overflow-hidden` container doesn't have `overscrollBehavior: none` or `touch-action` constraints — iOS can still bounce/scroll it
-2. The header `div` (shrink-0) doesn't prevent touch-move events from bubbling — so dragging on the header can still move content
-3. The `body`/`html` elements may also be scrollable on iOS PWA
+### 1. New file: `src/lib/image-compress.ts`
+- Canvas-based resize + WebP conversion utility
+- Max dimension: 1200px (preserves aspect ratio)
+- WebP quality: 0.8
+- Fallback to JPEG 0.85 if browser doesn't support WebP canvas export
+- Returns a `File` object ready for upload
+- Key detail: EXIF GPS must be extracted from the **original** file before compression (Canvas strips EXIF)
 
-## Solution
+### 2. Update `src/components/CaptureScreen.tsx`
+- Import `compressImage` from the new utility
+- In `handleFile`: extract GPS from original file first, then compress, store compressed file in state, use canvas data URL for preview
+- In `handleSave`: pass the pre-extracted GPS coords to `saveMemory` so we don't lose location data
+- Update `saveMemory` call signature to accept optional GPS coords
 
-### 1. Lock the page-level scroll (`src/index.css`)
-Add `overflow: hidden` and `overscroll-behavior: none` to `html, body` to prevent any page-level scrolling on iOS.
+### 3. Update `src/components/MemoryCard.tsx`
+- In `handleImageChange`: compress the replacement image before storing in state
+- No GPS concern here since edits don't update GPS
 
-### 2. Block touch scrolling on the header (`src/pages/Index.tsx`)
-Add `touch-action: none` CSS and an `onTouchMove` handler with `e.preventDefault()` on the header wrapper div. This prevents any vertical drag on the header from creating scroll movement.
+### 4. Update `src/lib/memories.ts`
+- `saveMemory`: accept optional `gps` parameter so coords extracted from the original (pre-compression) file can be passed through, since the compressed WebP will have no EXIF
+- Validation will pass since WebP is already in `ALLOWED_TYPES`
 
-### 3. Keep `overscrollBehavior: none` on the feed container
-Already in place — ensures the feed doesn't rubber-band into the header area.
-
-### Files
-| File | Change |
-|------|--------|
-| `src/index.css` | Add `html, body { overflow: hidden; overscroll-behavior: none; }` |
-| `src/pages/Index.tsx` | Add `touch-action: none` style + `onTouchMove={e => e.preventDefault()}` to the header wrapper div (line 83) |
+## Technical Notes
+- EXIF extraction happens on the original file **before** compression, so GPS data is preserved in the database even though the uploaded WebP has no EXIF
+- No changes to existing stored images — they continue to work as-is
+- No visual or UX changes — same capture flow, same card layout
 
