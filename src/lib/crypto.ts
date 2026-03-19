@@ -70,7 +70,7 @@ export async function decryptBlob(
   mimeType = "image/webp"
 ): Promise<Blob> {
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv: iv as BufferSource },
     key,
     encrypted
   );
