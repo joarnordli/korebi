@@ -18,6 +18,7 @@ export interface Memory {
   user_id: string;
   latitude: number | null;
   longitude: number | null;
+  encryption_iv: string | null;
 }
 
 const ALLOWED_TYPES: Record<string, string> = {
