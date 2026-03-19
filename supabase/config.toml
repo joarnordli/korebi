@@ -9,3 +9,5 @@ project_id = "evjpvgsmrojbnccgkoxv"
     verify_jwt = false
   [functions.send-reminders]
     verify_jwt = false
+  [functions.get-encryption-salt]
+    verify_jwt = false

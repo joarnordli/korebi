@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
 import { compressImage } from "@/lib/image-compress";
@@ -28,6 +28,15 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
   useEffect(() => {
     hasMounted.current = true;
   }, []);
+
+  // Revoke decrypted object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (memory.image_url.startsWith("blob:")) {
+        URL.revokeObjectURL(memory.image_url);
+      }
+    };
+  }, [memory.image_url]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

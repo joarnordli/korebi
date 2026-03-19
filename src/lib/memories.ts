@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { extractGpsFromFile } from "@/lib/exif";
+import {
+  getEncryptionSalt,
+  deriveKey,
+  encryptBlob,
+  decryptBlob,
+  ivToBase64,
+  base64ToIv,
+} from "@/lib/crypto";
 
 export interface Memory {
   id: string;
@@ -10,6 +18,7 @@ export interface Memory {
   user_id: string;
   latitude: number | null;
   longitude: number | null;
+  encryption_iv: string | null;
 }
 
 const ALLOWED_TYPES: Record<string, string> = {
@@ -131,13 +140,48 @@ export async function getMemories(): Promise<Memory[]> {
     .select("*")
     .order("date", { ascending: false });
   if (error) throw error;
-  const memories = data ?? [];
+  const memories = (data ?? []) as Memory[];
   if (memories.length === 0) return [];
 
   const paths = memories.map((m) => extractStoragePath(m.image_url));
   const urlMap = await batchSignUrls(paths);
 
+  // Identify encrypted memories and decrypt them in parallel
+  const encryptedMemories = memories.filter((m) => m.encryption_iv);
+
+  let cryptoKey: CryptoKey | null = null;
+  if (encryptedMemories.length > 0) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user) {
+      const salt = await getEncryptionSalt();
+      cryptoKey = await deriveKey(userData.user.id, salt);
+    }
+  }
+
+  // Build final memory list with decrypted object URLs for encrypted images
+  const decryptedUrls = new Map<string, string>();
+  if (cryptoKey && encryptedMemories.length > 0) {
+    await Promise.all(
+      encryptedMemories.map(async (m) => {
+        try {
+          const path = extractStoragePath(m.image_url);
+          const signedUrl = urlMap.get(path) || m.image_url;
+          const response = await fetch(signedUrl);
+          const encryptedBuffer = await response.arrayBuffer();
+          const iv = base64ToIv(m.encryption_iv!);
+          const blob = await decryptBlob(encryptedBuffer, iv, cryptoKey!);
+          decryptedUrls.set(m.id, URL.createObjectURL(blob));
+        } catch (err) {
+          console.warn("Failed to decrypt memory", m.id, err);
+        }
+      })
+    );
+  }
+
   return memories.map((m) => {
+    if (decryptedUrls.has(m.id)) {
+      return { ...m, image_url: decryptedUrls.get(m.id)! };
+    }
     const path = extractStoragePath(m.image_url);
     return { ...m, image_url: urlMap.get(path) || m.image_url };
   });
@@ -151,10 +195,23 @@ export async function saveMemory(
   gps?: { latitude: number; longitude: number } | null
 ): Promise<void> {
   const ext = await validateImageFile(imageFile);
+
+  // Encrypt the image blob before upload
+  const salt = await getEncryptionSalt();
+  const key = await deriveKey(userId, salt);
+  const { encrypted, iv } = await encryptBlob(imageFile, key);
+
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const encryptedFile = new File([encrypted], `memory.enc`, {
+    type: "application/octet-stream",
+  });
+
   const { error: uploadError } = await supabase.storage
     .from("memories")
-    .upload(path, imageFile, { upsert: true, contentType: imageFile.type });
+    .upload(path, encryptedFile, {
+      upsert: true,
+      contentType: "application/octet-stream",
+    });
   if (uploadError) throw uploadError;
 
   // Use provided GPS coords (extracted before compression) or try EXIF as fallback
@@ -168,6 +225,7 @@ export async function saveMemory(
       note: note.trim() || null,
       latitude: coords?.latitude ?? null,
       longitude: coords?.longitude ?? null,
+      encryption_iv: ivToBase64(iv),
     } as any,
     { onConflict: "user_id,date" }
   );
@@ -209,20 +267,38 @@ export async function updateMemory(
   updates: { note?: string; imageFile?: File }
 ): Promise<void> {
   let image_url: string | undefined;
+  let encryption_iv: string | undefined;
 
   if (updates.imageFile) {
     const ext = await validateImageFile(updates.imageFile);
+
+    // Encrypt replacement image
+    const salt = await getEncryptionSalt();
+    const key = await deriveKey(userId, salt);
+    const { encrypted, iv } = await encryptBlob(updates.imageFile, key);
+
     const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const encryptedFile = new File([encrypted], `memory.enc`, {
+      type: "application/octet-stream",
+    });
+
     const { error: uploadError } = await supabase.storage
       .from("memories")
-      .upload(path, updates.imageFile, { upsert: true, contentType: updates.imageFile.type });
+      .upload(path, encryptedFile, {
+        upsert: true,
+        contentType: "application/octet-stream",
+      });
     if (uploadError) throw uploadError;
     image_url = path;
+    encryption_iv = ivToBase64(iv);
   }
 
   const updateData: Record<string, unknown> = {};
   if (updates.note !== undefined) updateData.note = updates.note.trim() || null;
-  if (image_url) updateData.image_url = image_url;
+  if (image_url) {
+    updateData.image_url = image_url;
+    updateData.encryption_iv = encryption_iv;
+  }
 
   if (Object.keys(updateData).length === 0) return;
 
