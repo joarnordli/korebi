@@ -80,7 +80,7 @@ export default function Index() {
   return (
     <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
       {/* Static header */}
-      <div className="shrink-0 backdrop-blur-xl" style={{ background: "hsl(var(--background))" }}>
+      <div className="shrink-0 backdrop-blur-xl" style={{ background: "hsl(var(--background))", touchAction: "none" }} onTouchMove={(e) => e.preventDefault()}>
         <header className="px-6 pb-4 pt-[16px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
