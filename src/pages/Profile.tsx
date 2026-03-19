@@ -245,8 +245,8 @@ export default function Profile() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
-      <header className="px-6 pt-12 pb-6">
+    <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+      <header className="shrink-0 px-6 pt-12 pb-6">
         <button
           onClick={() => navigate("/")}
           className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
@@ -269,7 +269,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <div className="px-6 space-y-4 flex-1">
+      <div className="flex-1 overflow-y-auto px-6 space-y-4" style={{ overscrollBehavior: "none" }}>
         {/* Streak Counter */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
