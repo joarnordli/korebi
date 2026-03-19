@@ -79,8 +79,8 @@ export default function Index() {
 
   return (
     <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
-      {/* Fixed header */}
-      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-10 backdrop-blur-xl max-w-md mx-auto" style={{ background: "linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.7))" }}>
+      {/* Static header */}
+      <div className="shrink-0 backdrop-blur-xl" style={{ background: "hsl(var(--background))" }}>
         <header className="px-6 pb-4 pt-[16px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -131,16 +131,13 @@ export default function Index() {
             )}
           </div>
         </div>
-
-
-
       </div>
 
       {/* Scrollable content */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ paddingTop: headerHeight, overscrollBehavior: "none" }}
+        style={{ overscrollBehavior: "none" }}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}>
         
