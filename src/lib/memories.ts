@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { extractGpsFromFile } from "@/lib/exif";
+import {
+  getEncryptionSalt,
+  deriveKey,
+  encryptBlob,
+  decryptBlob,
+  ivToBase64,
+  base64ToIv,
+} from "@/lib/crypto";
 
 export interface Memory {
   id: string;
