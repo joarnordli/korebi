@@ -267,20 +267,38 @@ export async function updateMemory(
   updates: { note?: string; imageFile?: File }
 ): Promise<void> {
   let image_url: string | undefined;
+  let encryption_iv: string | undefined;
 
   if (updates.imageFile) {
     const ext = await validateImageFile(updates.imageFile);
+
+    // Encrypt replacement image
+    const salt = await getEncryptionSalt();
+    const key = await deriveKey(userId, salt);
+    const { encrypted, iv } = await encryptBlob(updates.imageFile, key);
+
     const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const encryptedFile = new File([encrypted], `memory.enc`, {
+      type: "application/octet-stream",
+    });
+
     const { error: uploadError } = await supabase.storage
       .from("memories")
-      .upload(path, updates.imageFile, { upsert: true, contentType: updates.imageFile.type });
+      .upload(path, encryptedFile, {
+        upsert: true,
+        contentType: "application/octet-stream",
+      });
     if (uploadError) throw uploadError;
     image_url = path;
+    encryption_iv = ivToBase64(iv);
   }
 
   const updateData: Record<string, unknown> = {};
   if (updates.note !== undefined) updateData.note = updates.note.trim() || null;
-  if (image_url) updateData.image_url = image_url;
+  if (image_url) {
+    updateData.image_url = image_url;
+    updateData.encryption_iv = encryption_iv;
+  }
 
   if (Object.keys(updateData).length === 0) return;
 
