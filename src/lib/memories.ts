@@ -140,13 +140,48 @@ export async function getMemories(): Promise<Memory[]> {
     .select("*")
     .order("date", { ascending: false });
   if (error) throw error;
-  const memories = data ?? [];
+  const memories = (data ?? []) as Memory[];
   if (memories.length === 0) return [];
 
   const paths = memories.map((m) => extractStoragePath(m.image_url));
   const urlMap = await batchSignUrls(paths);
 
+  // Identify encrypted memories and decrypt them in parallel
+  const encryptedMemories = memories.filter((m) => m.encryption_iv);
+
+  let cryptoKey: CryptoKey | null = null;
+  if (encryptedMemories.length > 0) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user) {
+      const salt = await getEncryptionSalt();
+      cryptoKey = await deriveKey(userData.user.id, salt);
+    }
+  }
+
+  // Build final memory list with decrypted object URLs for encrypted images
+  const decryptedUrls = new Map<string, string>();
+  if (cryptoKey && encryptedMemories.length > 0) {
+    await Promise.all(
+      encryptedMemories.map(async (m) => {
+        try {
+          const path = extractStoragePath(m.image_url);
+          const signedUrl = urlMap.get(path) || m.image_url;
+          const response = await fetch(signedUrl);
+          const encryptedBuffer = await response.arrayBuffer();
+          const iv = base64ToIv(m.encryption_iv!);
+          const blob = await decryptBlob(encryptedBuffer, iv, cryptoKey!);
+          decryptedUrls.set(m.id, URL.createObjectURL(blob));
+        } catch (err) {
+          console.warn("Failed to decrypt memory", m.id, err);
+        }
+      })
+    );
+  }
+
   return memories.map((m) => {
+    if (decryptedUrls.has(m.id)) {
+      return { ...m, image_url: decryptedUrls.get(m.id)! };
+    }
     const path = extractStoragePath(m.image_url);
     return { ...m, image_url: urlMap.get(path) || m.image_url };
   });
