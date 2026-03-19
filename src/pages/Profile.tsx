@@ -246,7 +246,7 @@ export default function Profile() {
 
   return (
     <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
-      <header className="px-6 pt-12 pb-6">
+      <header className="shrink-0 px-6 pt-12 pb-6">
         <button
           onClick={() => navigate("/")}
           className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
