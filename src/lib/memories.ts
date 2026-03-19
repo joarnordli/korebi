@@ -147,7 +147,8 @@ export async function saveMemory(
   userId: string,
   date: string,
   imageFile: File,
-  note: string
+  note: string,
+  gps?: { latitude: number; longitude: number } | null
 ): Promise<void> {
   const ext = await validateImageFile(imageFile);
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
@@ -156,8 +157,8 @@ export async function saveMemory(
     .upload(path, imageFile, { upsert: true, contentType: imageFile.type });
   if (uploadError) throw uploadError;
 
-  // Extract GPS coordinates from EXIF data
-  const gps = await extractGpsFromFile(imageFile);
+  // Use provided GPS coords (extracted before compression) or try EXIF as fallback
+  const coords = gps ?? (await extractGpsFromFile(imageFile));
 
   const { error } = await supabase.from("memories").upsert(
     {
@@ -165,8 +166,8 @@ export async function saveMemory(
       date,
       image_url: path,
       note: note.trim() || null,
-      latitude: gps?.latitude ?? null,
-      longitude: gps?.longitude ?? null,
+      latitude: coords?.latitude ?? null,
+      longitude: coords?.longitude ?? null,
     } as any,
     { onConflict: "user_id,date" }
   );

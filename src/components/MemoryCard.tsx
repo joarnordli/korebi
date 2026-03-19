@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
+import { compressImage } from "@/lib/image-compress";
 import { useAuth } from "@/hooks/useAuth";
 import { MoreHorizontal, Check, X, ImagePlus, Pencil, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,13 +29,18 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
     hasMounted.current = true;
   }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setNewImage(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file);
+      setNewImage(compressed);
+      const reader = new FileReader();
+      reader.onload = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(compressed);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process image");
+    }
   };
 
   const handleSave = async () => {
