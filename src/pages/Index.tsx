@@ -93,7 +93,7 @@ export default function Index() {
   return (
     <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
       {/* Fixed header */}
-      <div className="fixed top-0 left-0 right-0 z-10 backdrop-blur-xl max-w-md mx-auto" style={{ background: "linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.7))" }}>
+      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-10 backdrop-blur-xl max-w-md mx-auto" style={{ background: "linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.7))" }}>
         <header className="px-6 pb-4 pt-[16px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
