@@ -42,7 +42,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
     if (!imageFile || !user) return;
     setSaving(true);
     try {
-      await saveMemory(user.id, getTodayKey(), imageFile, note);
+      await saveMemory(user.id, getTodayKey(), imageFile, note, gps);
       onSaved();
     } catch (err: any) {
       toast.error(err.message || "Failed to save memory");
