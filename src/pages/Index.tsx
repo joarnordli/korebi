@@ -152,7 +152,8 @@ export default function Index() {
       {/* Scrollable content */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto pt-[180px]"
+        className="flex-1 overflow-y-auto"
+        style={{ paddingTop: headerHeight, overscrollBehavior: "none" }}
         style={{ overscrollBehavior: "none" }}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}>
