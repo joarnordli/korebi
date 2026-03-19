@@ -29,6 +29,15 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
     hasMounted.current = true;
   }, []);
 
+  // Revoke decrypted object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (memory.image_url.startsWith("blob:")) {
+        URL.revokeObjectURL(memory.image_url);
+      }
+    };
+  }, [memory.image_url]);
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
