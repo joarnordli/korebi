@@ -29,14 +29,10 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
     hasMounted.current = true;
   }, []);
 
-  // Revoke decrypted object URLs on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      if (memory.image_url.startsWith("blob:")) {
-        URL.revokeObjectURL(memory.image_url);
-      }
-    };
-  }, [memory.image_url]);
+  // Note: We intentionally do NOT revoke blob: URLs here because
+  // react-query caches the Memory objects. Revoking on unmount
+  // invalidates cached URLs, breaking images when re-entering the feed.
+  // Blob URLs are freed automatically when the page unloads.
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
