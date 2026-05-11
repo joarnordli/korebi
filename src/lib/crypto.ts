@@ -23,6 +23,7 @@ export async function getEncryptionSalt(): Promise<string> {
 /** Clear the cached salt (call on sign-out for hygiene). */
 export function clearSaltCache() {
   cachedSalt = null;
+}
 
 /** Derive an AES-256-GCM key from userId + salt using PBKDF2 */
 export async function deriveKey(userId: string, salt: string): Promise<CryptoKey> {
