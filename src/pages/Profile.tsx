@@ -171,12 +171,10 @@ export default function Profile() {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const { data: memories, error } = await supabase.
-      from("memories").
-      select("*").
-      order("date", { ascending: true });
-      if (error) throw error;
-      if (!memories || memories.length === 0) {
+      // Reuse the decrypted feed loader so we get usable blob: URLs
+      const { getMemories } = await import("@/lib/memories");
+      const memories = await getMemories();
+      if (memories.length === 0) {
         toast.info("No memories to download yet.");
         return;
       }
@@ -187,7 +185,9 @@ export default function Profile() {
       const metadata = memories.map((m) => ({
         date: m.date,
         note: m.note,
-        created_at: m.created_at
+        latitude: m.latitude,
+        longitude: m.longitude,
+        created_at: m.created_at,
       }));
       zip.file("memories.json", JSON.stringify(metadata, null, 2));
 
@@ -196,8 +196,11 @@ export default function Profile() {
           const response = await fetch(memory.image_url);
           if (!response.ok) continue;
           const blob = await response.blob();
-          const ext = memory.image_url.split(".").pop()?.split("?")[0] || "jpg";
-          const filename = `${memory.date}${memory.note ? " - " + memory.note.slice(0, 40).replace(/[/\\?%*:|"<>]/g, "") : ""}.${ext}`;
+          // Derive extension from the actual decrypted blob mime type
+          const mime = blob.type || "image/webp";
+          const ext = mime.includes("/") ? mime.split("/")[1].split(";")[0] : "webp";
+          const safeNote = memory.note ? " - " + memory.note.slice(0, 40).replace(/[/\\?%*:|"<>]/g, "") : "";
+          const filename = `${memory.date}${safeNote}.${ext}`;
           zip.file(filename, blob);
         } catch {
           // Skip failed downloads
