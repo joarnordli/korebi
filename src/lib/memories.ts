@@ -84,6 +84,16 @@ async function validateImageFile(file: File): Promise<string> {
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 const SIGNED_URL_TTL = 86400; // 24 hours
 
+// Decrypted blob URL cache keyed by `${memory.id}:${iv}`. Persists across
+// React Query refreshes so we don't leak object URLs each time the feed reloads.
+const decryptCache = new Map<string, string>();
+
+/** Clear cached decrypted blob URLs (call on sign-out). */
+export function clearDecryptCache() {
+  for (const url of decryptCache.values()) URL.revokeObjectURL(url);
+  decryptCache.clear();
+}
+
 /** Extract storage path from a full URL or return as-is if already a path */
 function extractStoragePath(imageUrl: string): string {
   if (!imageUrl.startsWith("http")) return imageUrl;
