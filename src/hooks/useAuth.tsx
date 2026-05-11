@@ -99,6 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, checkSubscription]);
 
   const signOut = async () => {
+    const { clearSaltCache } = await import("@/lib/crypto");
+    const { clearDecryptCache } = await import("@/lib/memories");
+    clearSaltCache();
+    clearDecryptCache();
     await supabase.auth.signOut();
   };
 
