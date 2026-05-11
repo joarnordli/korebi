@@ -1,6 +1,15 @@
 const MAX_DIMENSION = 1200;
+const MAX_INPUT_DIMENSION = 8000; // Reject sources larger than this to avoid OOM
 const WEBP_QUALITY = 0.8;
 const JPEG_FALLBACK_QUALITY = 0.85;
+
+const HEIC_MIME_TYPES = ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"];
+
+function isHeic(file: File): boolean {
+  if (HEIC_MIME_TYPES.includes(file.type.toLowerCase())) return true;
+  const name = file.name.toLowerCase();
+  return name.endsWith(".heic") || name.endsWith(".heif");
+}
 
 /**
  * Loads a File into an HTMLImageElement.
