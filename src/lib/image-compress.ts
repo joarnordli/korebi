@@ -55,9 +55,19 @@ function supportsWebP(): boolean {
  * Extract GPS from the original file BEFORE calling this function.
  */
 export async function compressImage(file: File): Promise<File> {
+  if (isHeic(file)) {
+    throw new Error(
+      "HEIC photos aren't supported. In your iPhone Camera settings, set Formats to \"Most Compatible\", or choose a JPEG/PNG/WebP image."
+    );
+  }
+
   const img = await loadImage(file);
 
   let { width, height } = img;
+
+  if (width > MAX_INPUT_DIMENSION || height > MAX_INPUT_DIMENSION) {
+    throw new Error("Image is too large. Please choose a photo under 8000px on each side.");
+  }
 
   // Only downscale, never upscale
   if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
