@@ -83,8 +83,19 @@ export default function Profile() {
 
     try {
       if (enabled) {
-        if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+        if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
           toast.error("Push notifications are not supported in this browser.");
+          setTogglingReminders(false);
+          return;
+        }
+
+        // iOS Safari requires the app be installed to the Home Screen
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+        const isStandalone =
+          (window.navigator as any).standalone === true ||
+          window.matchMedia("(display-mode: standalone)").matches;
+        if (isIOS && !isStandalone) {
+          toast.error("On iPhone, add Okiro to your Home Screen first, then open it from there to enable reminders.");
           setTogglingReminders(false);
           return;
         }
@@ -96,7 +107,13 @@ export default function Profile() {
           return;
         }
 
-        const registration = await navigator.serviceWorker.ready;
+        // Race the SW ready against a timeout so a failed SW registration doesn't hang us forever
+        const registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<ServiceWorkerRegistration>((_, reject) =>
+            setTimeout(() => reject(new Error("Service worker not ready (registration may have failed)")), 5000)
+          ),
+        ]);
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -105,7 +122,7 @@ export default function Profile() {
         const subJson = subscription.toJSON();
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        await supabase.from("push_subscriptions").upsert(
+        const { error: upsertError } = await supabase.from("push_subscriptions").upsert(
           {
             user_id: user!.id,
             endpoint: subJson.endpoint!,
@@ -116,6 +133,7 @@ export default function Profile() {
           },
           { onConflict: "user_id,endpoint" }
         );
+        if (upsertError) throw upsertError;
 
         setRemindersEnabled(true);
         toast.success("Daily reminders enabled! You'll get a nudge between 10 AM and 10 PM.");
