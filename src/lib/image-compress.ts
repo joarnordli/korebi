@@ -1,6 +1,15 @@
 const MAX_DIMENSION = 1200;
+const MAX_INPUT_DIMENSION = 8000; // Reject sources larger than this to avoid OOM
 const WEBP_QUALITY = 0.8;
 const JPEG_FALLBACK_QUALITY = 0.85;
+
+const HEIC_MIME_TYPES = ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"];
+
+function isHeic(file: File): boolean {
+  if (HEIC_MIME_TYPES.includes(file.type.toLowerCase())) return true;
+  const name = file.name.toLowerCase();
+  return name.endsWith(".heic") || name.endsWith(".heif");
+}
 
 /**
  * Loads a File into an HTMLImageElement.
@@ -46,9 +55,19 @@ function supportsWebP(): boolean {
  * Extract GPS from the original file BEFORE calling this function.
  */
 export async function compressImage(file: File): Promise<File> {
+  if (isHeic(file)) {
+    throw new Error(
+      "HEIC photos aren't supported. In your iPhone Camera settings, set Formats to \"Most Compatible\", or choose a JPEG/PNG/WebP image."
+    );
+  }
+
   const img = await loadImage(file);
 
   let { width, height } = img;
+
+  if (width > MAX_INPUT_DIMENSION || height > MAX_INPUT_DIMENSION) {
+    throw new Error("Image is too large. Please choose a photo under 8000px on each side.");
+  }
 
   // Only downscale, never upscale
   if (width > MAX_DIMENSION || height > MAX_DIMENSION) {

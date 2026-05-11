@@ -90,8 +90,17 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
     try {
       const response = await fetch(memory.image_url);
       const blob = await response.blob();
-      const ext = blob.type.split("/")[1] || "jpg";
-      const file = new File([blob], `okiro-memory.${ext}`, { type: blob.type });
+      const mimeMap: Record<string, string> = {
+        "image/webp": "webp",
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/heic": "heic",
+        "image/heif": "heif",
+      };
+      const fileType = mimeMap[blob.type] ? blob.type : "image/jpeg";
+      const ext = mimeMap[blob.type] ?? "jpg";
+      const file = new File([blob], `okiro-memory.${ext}`, { type: fileType });
 
       const dateLabel = formatDate(memory.date);
       const text = memory.note

@@ -18,10 +18,9 @@ export default function Index() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const { memories, todayCaptured, streak, loading, refresh } = useMemories();
-  // Auto-switch to memories tab if today is already captured
-  useEffect(() => {
-    if (todayCaptured && tab === "today") setTab("memories");
-  }, [todayCaptured]);
+  // Note: we intentionally do NOT auto-switch tabs based on `todayCaptured`.
+  // `handleSaved` switches to "memories" right after a successful capture,
+  // which lets users freely navigate back to "today" afterwards (e.g. to retake/edit).
 
   const { containerRef, pullDistance, refreshing } = usePullToRefresh({
     onRefresh: refresh
