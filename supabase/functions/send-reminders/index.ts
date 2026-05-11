@@ -105,19 +105,34 @@ serve(async (req) => {
       });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    function getTodayInTimezone(timezone: string): string {
+      try {
+        const fmt = new Intl.DateTimeFormat("en-CA", {
+          timeZone: timezone,
+          year: "numeric", month: "2-digit", day: "2-digit",
+        });
+        return fmt.format(new Date()); // YYYY-MM-DD
+      } catch {
+        return new Date().toISOString().slice(0, 10);
+      }
+    }
+
     const eligibleChecks = await Promise.all(
       subscriptions.map(async (sub) => {
+        const userToday = getTodayInTimezone(sub.timezone);
         const currentHour = getCurrentHourInTimezone(sub.timezone);
-        const targetHour = await getRandomHourForUser(sub.user_id, today);
-        return { sub, eligible: currentHour === targetHour, currentHour, targetHour };
+        const targetHour = await getRandomHourForUser(sub.user_id, userToday);
+        const alreadySentToday = sub.last_sent_date === userToday;
+        // Fire if we're at or past the target hour today and haven't sent yet
+        const eligible = currentHour >= targetHour && currentHour <= MAX_HOUR && !alreadySentToday;
+        return { sub, eligible, currentHour, targetHour, userToday, alreadySentToday };
       })
     );
     const eligible = eligibleChecks.filter((e) => e.eligible).map((e) => e.sub);
 
     console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible this hour`);
     eligibleChecks.forEach((e) => {
-      console.log(`[SEND-REMINDERS] User ${e.sub.user_id}: tz=${e.sub.timezone} currentHour=${e.currentHour}, targetHour=${e.targetHour}, eligible=${e.eligible}`);
+      console.log(`[SEND-REMINDERS] User ${e.sub.user_id}: tz=${e.sub.timezone} userToday=${e.userToday} currentHour=${e.currentHour}, targetHour=${e.targetHour}, alreadySent=${e.alreadySentToday}, eligible=${e.eligible}`);
     });
 
     let sent = 0;
@@ -158,6 +173,12 @@ serve(async (req) => {
 
         if (response.ok || response.status === 201) {
           sent++;
+          // Mark this subscription as sent for the user's local "today" so we don't double-send
+          const userToday = getTodayInTimezone(sub.timezone);
+          await supabaseAdmin
+            .from("push_subscriptions")
+            .update({ last_sent_date: userToday })
+            .eq("id", sub.id);
           console.log(`[SEND-REMINDERS] Sent to ${sub.user_id} (status ${response.status})`);
         } else if (response.status === 410 || response.status === 404) {
           expiredIds.push(sub.id);

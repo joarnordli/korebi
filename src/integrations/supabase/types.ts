@@ -170,6 +170,7 @@ export type Database = {
           created_at: string
           endpoint: string
           id: string
+          last_sent_date: string | null
           p256dh: string
           reminder_enabled: boolean
           timezone: string
@@ -180,6 +181,7 @@ export type Database = {
           created_at?: string
           endpoint: string
           id?: string
+          last_sent_date?: string | null
           p256dh: string
           reminder_enabled?: boolean
           timezone?: string
@@ -190,6 +192,7 @@ export type Database = {
           created_at?: string
           endpoint?: string
           id?: string
+          last_sent_date?: string | null
           p256dh?: string
           reminder_enabled?: boolean
           timezone?: string

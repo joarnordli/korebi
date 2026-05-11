@@ -84,6 +84,16 @@ async function validateImageFile(file: File): Promise<string> {
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 const SIGNED_URL_TTL = 86400; // 24 hours
 
+// Decrypted blob URL cache keyed by `${memory.id}:${iv}`. Persists across
+// React Query refreshes so we don't leak object URLs each time the feed reloads.
+const decryptCache = new Map<string, string>();
+
+/** Clear cached decrypted blob URLs (call on sign-out). */
+export function clearDecryptCache() {
+  for (const url of decryptCache.values()) URL.revokeObjectURL(url);
+  decryptCache.clear();
+}
+
 /** Extract storage path from a full URL or return as-is if already a path */
 function extractStoragePath(imageUrl: string): string {
   if (!imageUrl.startsWith("http")) return imageUrl;
@@ -158,11 +168,19 @@ export async function getMemories(): Promise<Memory[]> {
     }
   }
 
-  // Build final memory list with decrypted object URLs for encrypted images
+  // Build final memory list with decrypted object URLs for encrypted images.
+  // Cache by `${memory.id}:${iv}` so repeated fetches reuse the same blob URL
+  // (prevents memory leaks from React Query refreshes / pull-to-refresh).
   const decryptedUrls = new Map<string, string>();
   if (cryptoKey && encryptedMemories.length > 0) {
     await Promise.all(
       encryptedMemories.map(async (m) => {
+        const cacheKey = `${m.id}:${m.encryption_iv}`;
+        const cached = decryptCache.get(cacheKey);
+        if (cached) {
+          decryptedUrls.set(m.id, cached);
+          return;
+        }
         try {
           const path = extractStoragePath(m.image_url);
           const signedUrl = urlMap.get(path) || m.image_url;
@@ -170,12 +188,23 @@ export async function getMemories(): Promise<Memory[]> {
           const encryptedBuffer = await response.arrayBuffer();
           const iv = base64ToIv(m.encryption_iv!);
           const blob = await decryptBlob(encryptedBuffer, iv, cryptoKey!);
-          decryptedUrls.set(m.id, URL.createObjectURL(blob));
+          const url = URL.createObjectURL(blob);
+          decryptCache.set(cacheKey, url);
+          decryptedUrls.set(m.id, url);
         } catch (err) {
           console.warn("Failed to decrypt memory", m.id, err);
         }
       })
     );
+  }
+
+  // Evict cache entries for memories no longer in the result set
+  const liveKeys = new Set(memories.map((m) => `${m.id}:${m.encryption_iv}`));
+  for (const [key, url] of decryptCache) {
+    if (!liveKeys.has(key)) {
+      URL.revokeObjectURL(url);
+      decryptCache.delete(key);
+    }
   }
 
   return memories.map((m) => {
