@@ -173,6 +173,12 @@ serve(async (req) => {
 
         if (response.ok || response.status === 201) {
           sent++;
+          // Mark this subscription as sent for the user's local "today" so we don't double-send
+          const userToday = getTodayInTimezone(sub.timezone);
+          await supabaseAdmin
+            .from("push_subscriptions")
+            .update({ last_sent_date: userToday })
+            .eq("id", sub.id);
           console.log(`[SEND-REMINDERS] Sent to ${sub.user_id} (status ${response.status})`);
         } else if (response.status === 410 || response.status === 404) {
           expiredIds.push(sub.id);
