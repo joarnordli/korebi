@@ -158,11 +158,19 @@ export async function getMemories(): Promise<Memory[]> {
     }
   }
 
-  // Build final memory list with decrypted object URLs for encrypted images
+  // Build final memory list with decrypted object URLs for encrypted images.
+  // Cache by `${memory.id}:${iv}` so repeated fetches reuse the same blob URL
+  // (prevents memory leaks from React Query refreshes / pull-to-refresh).
   const decryptedUrls = new Map<string, string>();
   if (cryptoKey && encryptedMemories.length > 0) {
     await Promise.all(
       encryptedMemories.map(async (m) => {
+        const cacheKey = `${m.id}:${m.encryption_iv}`;
+        const cached = decryptCache.get(cacheKey);
+        if (cached) {
+          decryptedUrls.set(m.id, cached);
+          return;
+        }
         try {
           const path = extractStoragePath(m.image_url);
           const signedUrl = urlMap.get(path) || m.image_url;
@@ -170,12 +178,23 @@ export async function getMemories(): Promise<Memory[]> {
           const encryptedBuffer = await response.arrayBuffer();
           const iv = base64ToIv(m.encryption_iv!);
           const blob = await decryptBlob(encryptedBuffer, iv, cryptoKey!);
-          decryptedUrls.set(m.id, URL.createObjectURL(blob));
+          const url = URL.createObjectURL(blob);
+          decryptCache.set(cacheKey, url);
+          decryptedUrls.set(m.id, url);
         } catch (err) {
           console.warn("Failed to decrypt memory", m.id, err);
         }
       })
     );
+  }
+
+  // Evict cache entries for memories no longer in the result set
+  const liveKeys = new Set(memories.map((m) => `${m.id}:${m.encryption_iv}`));
+  for (const [key, url] of decryptCache) {
+    if (!liveKeys.has(key)) {
+      URL.revokeObjectURL(url);
+      decryptCache.delete(key);
+    }
   }
 
   return memories.map((m) => {
