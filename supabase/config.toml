@@ -11,3 +11,7 @@ project_id = "evjpvgsmrojbnccgkoxv"
     verify_jwt = false
   [functions.get-encryption-salt]
     verify_jwt = false
+  [functions.get-vapid-key]
+    verify_jwt = false
+  [functions.send-test-notification]
+    verify_jwt = false
