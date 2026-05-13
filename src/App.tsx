@@ -1,10 +1,36 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function PushOpenTracker() {
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const eventId = params.get("n");
+      if (!eventId || !UUID_RE.test(eventId)) return;
+      // Fire-and-forget; failure is fine
+      supabase.functions.invoke("track-push-open", { body: { eventId } }).catch(() => {});
+      // Strip the param so reloads don't double-count
+      params.delete("n");
+      const search = params.toString();
+      const newUrl =
+        window.location.pathname +
+        (search ? `?${search}` : "") +
+        window.location.hash;
+      window.history.replaceState({}, "", newUrl);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  return null;
+}
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
