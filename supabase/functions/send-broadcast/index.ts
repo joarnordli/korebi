@@ -162,6 +162,23 @@ Deno.serve(async (req) => {
       while (idx < subs.length) {
         const i = idx++;
         const sub = subs[i];
+
+        // Log send event up front for open attribution
+        const { data: evt } = await admin
+          .from("push_send_events")
+          .insert({
+            user_id: sub.user_id,
+            source: "broadcast",
+            title,
+            body,
+            metadata: { audience, sub_id: sub.id },
+          })
+          .select("id")
+          .single();
+        const eventId = evt?.id as string | undefined;
+        const sep = url.includes("?") ? "&" : "?";
+        const eventUrl = eventId ? `${url}${sep}n=${eventId}` : url;
+
         try {
           const { endpoint, headers, body: pushBody } = await buildPushHTTPRequest({
             privateJWK,
@@ -170,7 +187,7 @@ Deno.serve(async (req) => {
               keys: { p256dh: sub.p256dh, auth: sub.auth },
             },
             message: {
-              payload: { title, body, url },
+              payload: { title, body, url: eventUrl, eventId },
               adminContact: "mailto:hello@okiroapp.com",
             },
           });
