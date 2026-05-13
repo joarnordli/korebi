@@ -1,6 +1,7 @@
 // Okiro Push Notification Service Worker
 
-const VAPID_PUBLIC_KEY = "BHax1hUAtH0nKUyh3NMz3p4JTZS3pPPldR8YpI7FaLGVefw0DLCLRXoN0vJB7sGalsvR1FgJhcvicgjWMGCH9F4";
+const SUPABASE_URL = "https://evjpvgsmrojbnccgkoxv.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2anB2Z3Ntcm9qYm5jY2drb3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNTg1NzMsImV4cCI6MjA4ODYzNDU3M30.Uk2u1_Qa17ihUQt_jy65emN3-xq-0_W6X1TVfZuS7kU";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -11,18 +12,29 @@ function urlBase64ToUint8Array(base64String) {
   return out;
 }
 
+async function fetchVapidPublicKey() {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/get-vapid-key`, {
+    headers: { apikey: SUPABASE_ANON_KEY },
+  });
+  if (!res.ok) throw new Error("Failed to fetch VAPID key");
+  const { publicKey } = await res.json();
+  return publicKey;
+}
+
 // Re-subscribe transparently when the browser rotates the push endpoint.
-// New endpoint will be picked up next time the user opens the app and the
-// Profile screen reads `push_subscriptions` (or on next reminder send,
-// 410/404 prunes the old row). We just need to keep the OS-level subscription alive.
 self.addEventListener("pushsubscriptionchange", (event) => {
   event.waitUntil(
-    self.registration.pushManager
-      .subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      })
-      .catch(() => {})
+    (async () => {
+      try {
+        const publicKey = await fetchVapidPublicKey();
+        await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      } catch {
+        // Best-effort; user will re-enable from the app
+      }
+    })()
   );
 });
 
