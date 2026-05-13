@@ -140,9 +140,6 @@ serve(async (req) => {
     const expiredIds: string[] = [];
 
     for (const sub of eligible) {
-      const delay = Math.floor(Math.random() * 5000);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-
       const message = messages[Math.floor(Math.random() * messages.length)];
 
       try {
