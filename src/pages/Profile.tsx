@@ -584,6 +584,8 @@ export default function Profile() {
           </motion.div>
         )}
 
+        {isAdmin && <AdminPanel />}
+
         {/* Subscription Status */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
