@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +66,65 @@ export default function Profile() {
   const [remindersLoading, setRemindersLoading] = useState(true);
   const [togglingReminders, setTogglingReminders] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+
+  // ===== Admin broadcast =====
+  const ADMIN_USER_IDS = new Set<string>(["123f18ad-9a45-4dcb-9527-61cb2be423d0"]);
+  const isAdmin = !!user && ADMIN_USER_IDS.has(user.id);
+  const [bcTitle, setBcTitle] = useState("Okiro");
+  const [bcBody, setBcBody] = useState("");
+  const [bcUrl, setBcUrl] = useState("/");
+  const [bcAudience, setBcAudience] = useState<"all_enabled" | "all_subscriptions" | "self">("all_enabled");
+  const [bcRecipients, setBcRecipients] = useState<number | null>(null);
+  const [bcPreviewing, setBcPreviewing] = useState(false);
+  const [bcConfirmOpen, setBcConfirmOpen] = useState(false);
+  const [bcConfirmText, setBcConfirmText] = useState("");
+  const [bcSending, setBcSending] = useState(false);
+  const [bcResult, setBcResult] = useState<{ sent: number; failed: number; expired_cleaned: number } | null>(null);
+
+  const handleBcPreview = async () => {
+    setBcPreviewing(true);
+    setBcRecipients(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-broadcast", {
+        body: { preview: true, audience: bcAudience },
+      });
+      if (error) throw error;
+      setBcRecipients(data?.recipients ?? 0);
+    } catch (err: any) {
+      toast.error(err.message || "Could not preview audience");
+    } finally {
+      setBcPreviewing(false);
+    }
+  };
+
+  const handleBcSend = async () => {
+    if (bcConfirmText !== "SEND") return;
+    setBcSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-broadcast", {
+        body: {
+          title: bcTitle.trim(),
+          body: bcBody.trim(),
+          url: bcUrl.trim() || "/",
+          audience: bcAudience,
+        },
+      });
+      if (error) throw error;
+      setBcResult({
+        sent: data?.sent ?? 0,
+        failed: data?.failed ?? 0,
+        expired_cleaned: data?.expired_cleaned ?? 0,
+      });
+      toast.success(`Broadcast sent to ${data?.sent ?? 0} device${data?.sent === 1 ? "" : "s"}.`);
+      setBcConfirmOpen(false);
+      setBcConfirmText("");
+      setBcBody("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send broadcast");
+    } finally {
+      setBcSending(false);
+    }
+  };
 
   const { streak, locations } = useMemories();
 
@@ -395,6 +454,102 @@ export default function Profile() {
           </motion.div>
         )}
 
+        {/* Admin: Broadcast push */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.09 }}
+            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-3">
+              <Megaphone className="w-4 h-4 text-primary" />
+              <h2 className="font-display text-sm font-bold text-foreground">Admin · Broadcast</h2>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bcTitle}
+                  maxLength={80}
+                  onChange={(e) => setBcTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">
+                  Body <span className="text-muted-foreground/70">({bcBody.length}/200)</span>
+                </label>
+                <textarea
+                  value={bcBody}
+                  maxLength={200}
+                  rows={3}
+                  placeholder="What do you want to say?"
+                  onChange={(e) => setBcBody(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">Open URL when tapped</label>
+                <input
+                  type="text"
+                  value={bcUrl}
+                  onChange={(e) => setBcUrl(e.target.value)}
+                  placeholder="/"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="font-body text-xs text-muted-foreground block mb-1">Audience</label>
+                <select
+                  value={bcAudience}
+                  onChange={(e) => {
+                    setBcAudience(e.target.value as any);
+                    setBcRecipients(null);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="all_enabled">All users with reminders ON</option>
+                  <option value="all_subscriptions">All push subscriptions</option>
+                  <option value="self">Just me (dry run)</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBcPreview}
+                  disabled={bcPreviewing}
+                  className="flex-1 py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+                  {bcPreviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Count recipients"}
+                </button>
+                <button
+                  onClick={() => {
+                    if (!bcTitle.trim() || !bcBody.trim()) {
+                      toast.error("Title and body are required");
+                      return;
+                    }
+                    setBcConfirmOpen(true);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
+                  <Send className="w-3.5 h-3.5" />
+                  Send broadcast
+                </button>
+              </div>
+
+              {bcRecipients !== null && (
+                <p className="font-body text-xs text-muted-foreground">
+                  This audience reaches <strong className="text-foreground">{bcRecipients}</strong> device{bcRecipients === 1 ? "" : "s"}.
+                </p>
+              )}
+              {bcResult && (
+                <p className="font-body text-xs text-muted-foreground">
+                  Last send: <strong className="text-foreground">{bcResult.sent} delivered</strong>, {bcResult.failed} failed, {bcResult.expired_cleaned} expired cleaned.
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Subscription Status */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -604,6 +759,56 @@ export default function Profile() {
               className="flex-1 py-2 rounded-xl bg-destructive text-destructive-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {deleting ? "Deleting…" : "Delete forever"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Broadcast Confirmation Dialog */}
+      <AlertDialog open={bcConfirmOpen} onOpenChange={(open) => {
+        if (!bcSending) {
+          setBcConfirmOpen(open);
+          if (!open) setBcConfirmText("");
+        }
+      }}>
+        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg text-foreground">Send this broadcast?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
+              Audience: <strong className="text-foreground">
+                {bcAudience === "all_enabled" ? "All users with reminders ON" :
+                 bcAudience === "all_subscriptions" ? "All push subscriptions" : "Just me"}
+              </strong>
+              {bcRecipients !== null && <> · {bcRecipients} device{bcRecipients === 1 ? "" : "s"}</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl border border-border bg-secondary/40 p-3">
+            <p className="font-display text-sm font-bold text-foreground">{bcTitle}</p>
+            <p className="font-body text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{bcBody}</p>
+          </div>
+          <div className="py-1">
+            <label className="font-body text-xs text-muted-foreground block mb-1.5">
+              Type <strong className="text-foreground">SEND</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={bcConfirmText}
+              onChange={(e) => setBcConfirmText(e.target.value)}
+              placeholder="SEND"
+              disabled={bcSending}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+            />
+          </div>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel disabled={bcSending} className="flex-1 rounded-xl font-body text-sm">
+              Cancel
+            </AlertDialogCancel>
+            <button
+              onClick={handleBcSend}
+              disabled={bcConfirmText !== "SEND" || bcSending}
+              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity">
+              {bcSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {bcSending ? "Sending…" : "Send now"}
             </button>
           </AlertDialogFooter>
         </AlertDialogContent>
