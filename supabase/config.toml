@@ -19,3 +19,5 @@ project_id = "evjpvgsmrojbnccgkoxv"
     verify_jwt = false
   [functions.send-engagement]
     verify_jwt = false
+  [functions.track-push-open]
+    verify_jwt = false
