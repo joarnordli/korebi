@@ -67,6 +67,65 @@ export default function Profile() {
   const [togglingReminders, setTogglingReminders] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
 
+  // ===== Admin broadcast =====
+  const ADMIN_USER_IDS = new Set<string>(["123f18ad-9a45-4dcb-9527-61cb2be423d0"]);
+  const isAdmin = !!user && ADMIN_USER_IDS.has(user.id);
+  const [bcTitle, setBcTitle] = useState("Okiro");
+  const [bcBody, setBcBody] = useState("");
+  const [bcUrl, setBcUrl] = useState("/");
+  const [bcAudience, setBcAudience] = useState<"all_enabled" | "all_subscriptions" | "self">("all_enabled");
+  const [bcRecipients, setBcRecipients] = useState<number | null>(null);
+  const [bcPreviewing, setBcPreviewing] = useState(false);
+  const [bcConfirmOpen, setBcConfirmOpen] = useState(false);
+  const [bcConfirmText, setBcConfirmText] = useState("");
+  const [bcSending, setBcSending] = useState(false);
+  const [bcResult, setBcResult] = useState<{ sent: number; failed: number; expired_cleaned: number } | null>(null);
+
+  const handleBcPreview = async () => {
+    setBcPreviewing(true);
+    setBcRecipients(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-broadcast", {
+        body: { preview: true, audience: bcAudience },
+      });
+      if (error) throw error;
+      setBcRecipients(data?.recipients ?? 0);
+    } catch (err: any) {
+      toast.error(err.message || "Could not preview audience");
+    } finally {
+      setBcPreviewing(false);
+    }
+  };
+
+  const handleBcSend = async () => {
+    if (bcConfirmText !== "SEND") return;
+    setBcSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-broadcast", {
+        body: {
+          title: bcTitle.trim(),
+          body: bcBody.trim(),
+          url: bcUrl.trim() || "/",
+          audience: bcAudience,
+        },
+      });
+      if (error) throw error;
+      setBcResult({
+        sent: data?.sent ?? 0,
+        failed: data?.failed ?? 0,
+        expired_cleaned: data?.expired_cleaned ?? 0,
+      });
+      toast.success(`Broadcast sent to ${data?.sent ?? 0} device${data?.sent === 1 ? "" : "s"}.`);
+      setBcConfirmOpen(false);
+      setBcConfirmText("");
+      setBcBody("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send broadcast");
+    } finally {
+      setBcSending(false);
+    }
+  };
+
   const { streak, locations } = useMemories();
 
   // Check current reminder status
