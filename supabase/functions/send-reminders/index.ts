@@ -191,6 +191,20 @@ serve(async (req) => {
       const sub = e.sub;
       const message = messages[Math.floor(Math.random() * messages.length)];
 
+      // Log send event up front for open attribution
+      const { data: evt } = await supabaseAdmin
+        .from("push_send_events")
+        .insert({
+          user_id: sub.user_id,
+          source: "reminder",
+          title: "Okiro",
+          body: message,
+        })
+        .select("id")
+        .single();
+      const eventId = evt?.id as string | undefined;
+      const url = eventId ? `/?n=${eventId}` : "/";
+
       try {
         const { endpoint, headers, body } = await buildPushHTTPRequest({
           privateJWK,
@@ -199,7 +213,7 @@ serve(async (req) => {
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           message: {
-            payload: { title: "Okiro", body: message, url: "/" },
+            payload: { title: "Okiro", body: message, url, eventId },
             adminContact: "mailto:hello@okiroapp.com",
           },
         });

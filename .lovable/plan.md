@@ -1,69 +1,97 @@
-## Notification roadmap (3 phases)
+## Phase 4 — Admin viewer + push engagement analytics
 
-Now that push delivery works end-to-end, here's a phased plan. Each phase ships independently so we can test before moving on.
-
----
-
-### Phase 1 — Admin broadcast tool (your Profile)
-
-Give you a private composer to send a custom push to all (or a slice of) users, gated to your user ID only.
-
-**What you'll see**
-- New "Admin" section visible only when your `user_id` matches a hardcoded constant.
-- Form: Title, Body, optional URL (defaults to `/`), and an audience picker:
-  - All users with reminders enabled
-  - All push subscriptions (regardless of toggle)
-  - Just me (dry run)
-- "Preview" button shows the count of recipients before sending.
-- "Send" requires a typed confirmation ("SEND") to avoid accidents.
-- After send: a small report — sent / failed / expired-cleaned.
-
-**Backend**
-- New edge function `send-broadcast` (verify_jwt = true in code; rejects if caller's `user.id` ≠ admin ID).
-- Reuses the same VAPID + `buildPushHTTPRequest` flow as `send-test-notification`.
-- Iterates subscriptions in batches, captures per-endpoint status, cleans up 404/410.
-- Logs each broadcast (new `broadcast_log` table: id, sent_by, title, body, audience, sent_count, failed_count, created_at) so you have an audit trail.
-
-**Safety**
-- Hardcoded admin ID in the function (server-side check — not just UI hiding).
-- Rate limit: max 1 broadcast per minute per admin.
+Two related additions to the Profile admin section: see what the cron jobs are doing, and measure how users actually respond to the notifications.
 
 ---
 
-### Phase 2 — Polish daily reminders
+### Part A — Admin run viewer
 
-Make the existing randomized daily reminder feel more thoughtful.
+A new collapsible card on `/profile` (admin-only, same hardcoded ID gate already used by the broadcast tool) that shows recent activity from the three log tables:
 
-- **Per-user preferred window**: add `reminder_window_start` / `reminder_window_end` columns (default 10–21). Profile UI gets two simple time selects ("Morning–Evening", "Afternoon–Night", or custom).
-- **Smarter messages**: expand the message pool, and skip the reminder entirely if the user has already captured today's memory (check `memories` for today in their tz before sending).
-- **Better logging**: the `send-reminders` function already logs counts; add a small `reminder_run_log` table (run_at, eligible, sent, failed, expired) so you can see history at a glance.
-- **Self-heal**: on `pushsubscriptionchange` failures, clear stale rows automatically.
+- **Reminder runs** (last 24h) — each hourly run with: time, total subs, eligible, sent, skipped (already captured), failed, expired cleaned, duration.
+- **Engagement runs** (last 7 days) — each hourly run with: streak sent, comeback sent, recap sent, failed.
+- **Broadcast log** (last 30) — title, audience, recipients, sent / failed / expired-cleaned, time.
 
----
+Pulled directly via `supabase.from(...).select(...)` from the client. Today these tables only allow service-role access, so we add a small policy: rows are readable by clients **only when the caller's `auth.uid()` is in the admin allowlist**, enforced with a SQL helper `public.is_admin(_user_id uuid)` that hardcodes the same admin UUID server-side. (No new RPC, no edge function — just RLS.)
 
-### Phase 3 — Engagement triggers
-
-Event-driven notifications, not just the daily one.
-
-- **Streak nudge**: if a user is on a 3+ day streak and hasn't captured by their evening cutoff, send a streak-aware message ("Don't break your 5-day streak ✨"). Computed from `memories` rows.
-- **Comeback**: if a user hasn't captured for 3 days, send a single gentle "We miss you" (then cool down for 7 days so it never feels spammy).
-- **Monthly recap ready**: on the 1st of each month, push "Your [Month] recap is ready" linking to the feed filtered by month.
-- All of these flow through one new `send-engagement` cron function that runs hourly and decides what (if anything) each user should get, respecting their timezone and a per-trigger cooldown table.
+UI is read-only, with a Refresh button and timestamps localised to the user's tz.
 
 ---
 
-### Suggested order & validation
+### Part B — Push engagement tracking
 
-1. Ship Phase 1, send yourself a test broadcast, then a real one to all users when you're confident.
-2. Ship Phase 2, watch the run log for a week.
-3. Ship Phase 3 one trigger at a time (streak → comeback → recap), each with a cooldown so users never get more than one push per day total.
+Goal: for every push we send, know whether the recipient **opened the app from it**, so we can compare open-rates between trigger types (daily reminder vs. streak nudge vs. comeback vs. recap vs. broadcast).
 
-### Technical notes (for me)
+#### Data model
 
-- Admin gate: `const ADMIN_USER_IDS = new Set([...])` checked server-side in every admin function.
-- New tables created via migration: `broadcast_log`, `reminder_run_log`, `engagement_sends` (user_id, trigger, sent_at — for cooldowns).
-- All new edge functions registered in `supabase/config.toml`.
-- Engagement cron added via `cron.schedule` using the existing pg_cron setup.
-- Reuse the existing `vapidKeysToJWK` helper — extract it into a shared module to avoid duplication across 3 functions.
+One new table `push_send_events`:
+- `id` uuid pk
+- `user_id` uuid
+- `source` text — `'reminder' | 'streak' | 'comeback' | 'recap' | 'broadcast' | 'test'`
+- `title`, `body` text
+- `sent_at` timestamptz
+- `opened_at` timestamptz null
+- `open_count` int default 0 (in case user clicks twice)
+- `metadata` jsonb (e.g. broadcast_id, streak length, etc.)
 
-Want me to start with **Phase 1 only**, or queue up Phase 1 + 2 in one go?
+Service-role full access; admins can read via the same `is_admin()` helper as Part A.
+
+#### How sends get tagged
+
+Each edge function (`send-reminders`, `send-engagement`, `send-broadcast`, `send-test-notification`) inserts a row into `push_send_events` **before** firing the push, captures the new `id`, and embeds it in the push payload as `eventId`. Push payload becomes:
+
+```json
+{ "title": "...", "body": "...", "url": "/?n=<eventId>", "eventId": "<uuid>" }
+```
+
+Failed sends update the row (or just leave `opened_at` null — they simply never get attributed).
+
+#### How opens get recorded
+
+Two complementary signals so we don't miss anything:
+
+1. **Service worker** (`public/sw.js`) — on `notificationclick`, before opening the window, fire-and-forget a `fetch` to a new lightweight edge function `track-push-open` with `{ eventId }`. This works even if the user dismisses the page or the app fails to load.
+2. **App load fallback** — `App.tsx` reads the `?n=<eventId>` query param on mount and, if present, calls the same edge function. Catches cases where the SW request was blocked (Safari sometimes drops background fetches). Then strips the param from the URL.
+
+`track-push-open` (verify_jwt = false, no auth needed) just does:
+```sql
+update push_send_events
+set opened_at = coalesce(opened_at, now()), open_count = open_count + 1
+where id = $1
+```
+Idempotent — only the first open sets `opened_at`, but `open_count` keeps incrementing.
+
+#### Insights panel (admin only)
+
+A second card on Profile, "**Push performance**", showing aggregate stats for the last 30 days:
+
+- **Per source**: sent / opened / open-rate %, sorted by open-rate.
+- **Daily reminder open-rate over time** — a small sparkline (recharts) of the last 14 days.
+- **Top 5 broadcasts** by open-rate with title + sent count.
+
+Computed via two `select` queries grouped by `source` and by `date_trunc('day', sent_at)`.
+
+---
+
+### Order of work
+
+1. **Migration**: `is_admin()` SQL helper, RLS reads on `reminder_run_log` / `engagement_run_log` / `broadcast_log`, new `push_send_events` table + RLS.
+2. **`track-push-open` edge function** + register in `config.toml`.
+3. Update **`send-reminders`**, **`send-engagement`**, **`send-broadcast`**, **`send-test-notification`** to insert a `push_send_events` row and embed `eventId` in payload + URL.
+4. Update **`public/sw.js`** to ping `track-push-open` on `notificationclick`.
+5. Update **`App.tsx`** to consume `?n=` on load and call the same endpoint.
+6. Add **Admin Run Viewer** card and **Push Performance** card to `Profile.tsx`.
+
+### Technical notes
+
+- The `is_admin()` helper centralises the allowlist so we don't repeat the UUID in every RLS policy. Stored as `SECURITY DEFINER`, `STABLE`, with explicit `search_path = public`.
+- `eventId` lives only in the encrypted push payload + the URL query param — no PII leaves the system.
+- `track-push-open` accepts an `eventId` UUID, validates format with Zod, and is fully unauthenticated (the eventId is the capability). Worst case: someone guesses a UUID and inflates one row's open count — acceptable, and we still have `opened_at` as a "first open" signal.
+- The SW fetch uses `keepalive: true` so it survives page navigation.
+- Existing broadcast/reminder/engagement run-log tables are unchanged; we just add SELECT policies.
+
+### Out of scope for now
+
+- Per-user notification timeline (could add later from the same data).
+- A/B testing different message copy (data is there once Part B is shipped, but no UI yet).
+- Email-style unsubscribe links — push already has the per-user toggle.

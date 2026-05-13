@@ -38,6 +38,16 @@ self.addEventListener("pushsubscriptionchange", (event) => {
   );
 });
 
+function trackOpen(eventId) {
+  if (!eventId) return Promise.resolve();
+  return fetch(`${SUPABASE_URL}/functions/v1/track-push-open`, {
+    method: "POST",
+    keepalive: true,
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ eventId }),
+  }).catch(() => { /* best effort */ });
+}
+
 self.addEventListener("push", (event) => {
   let data = { title: "Okiro", body: "Time to capture today's moment ✨" };
 
@@ -56,6 +66,7 @@ self.addEventListener("push", (event) => {
     vibrate: [100, 50, 100],
     data: {
       url: data.url || "/",
+      eventId: data.eventId || null,
     },
     actions: [
       { action: "capture", title: "Capture now" },
@@ -69,15 +80,24 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const url = event.notification.data?.url || "/";
+  const eventId = event.notification.data?.eventId || null;
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          return client.focus();
+    Promise.all([
+      trackOpen(eventId),
+      clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+        for (const client of windowClients) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            // Try to navigate the focused client to the tracked URL so the app can
+            // also pick up the ?n= fallback param.
+            if ("navigate" in client) {
+              try { client.navigate(url); } catch { /* ignore */ }
+            }
+            return client.focus();
+          }
         }
-      }
-      return clients.openWindow(url);
-    })
+        return clients.openWindow(url);
+      }),
+    ])
   );
 });
