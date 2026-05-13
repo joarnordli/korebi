@@ -95,12 +95,14 @@ const App = () => (
     persistOptions={{
       persister,
       maxAge: 24 * 60 * 60 * 1000,
-      buster: "v1",
+      buster: "v2",
       dehydrateOptions: {
-        // Only persist the lightweight query keys we want to hydrate from at cold start.
+        // Only persist lightweight, non-ephemeral query data. The `memories`
+        // query contains blob: / signed URLs that go stale across reloads,
+        // so we deliberately exclude it and let it refetch on mount.
         shouldDehydrateQuery: (query) => {
           const key = query.queryKey?.[0];
-          return key === "memories" || key === "hasTodayMemory";
+          return key === "hasTodayMemory";
         },
       },
     }}
