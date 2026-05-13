@@ -681,13 +681,50 @@ export default function Profile() {
             }
           </div>
           {remindersEnabled && !remindersLoading && (
-            <button
-              onClick={handleSendTest}
-              disabled={sendingTest}
-              className="mt-3 w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-              {sendingTest ? "Sending…" : "Send test notification"}
-            </button>
+            <>
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="font-body text-xs text-muted-foreground mb-2">
+                  Preferred time window <span className="text-muted-foreground/70">(your local time)</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={windowStart}
+                    onChange={(e) => handleSaveWindow(parseInt(e.target.value, 10), windowEnd)}
+                    disabled={savingWindow}
+                    className="flex-1 px-2 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h} disabled={h > windowEnd}>
+                        {h.toString().padStart(2, "0")}:00
+                      </option>
+                    ))}
+                  </select>
+                  <span className="font-body text-xs text-muted-foreground">to</span>
+                  <select
+                    value={windowEnd}
+                    onChange={(e) => handleSaveWindow(windowStart, parseInt(e.target.value, 10))}
+                    disabled={savingWindow}
+                    className="flex-1 px-2 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h} disabled={h < windowStart}>
+                        {h.toString().padStart(2, "0")}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="font-body text-xs text-muted-foreground mt-2">
+                  We'll skip the reminder on days you've already captured a memory.
+                </p>
+              </div>
+              <button
+                onClick={handleSendTest}
+                disabled={sendingTest}
+                className="mt-3 w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+                {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+                {sendingTest ? "Sending…" : "Send test notification"}
+              </button>
+            </>
           )}
         </motion.div>
 
