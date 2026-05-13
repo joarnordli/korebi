@@ -81,12 +81,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data, error } = await supabase.functions.invoke("check-subscription");
         if (error) throw error;
-        setSubscribed(data?.subscribed ?? false);
-        setIsTrialing(data?.is_trialing ?? false);
-        setTrialDaysLeft(data?.trial_days_left ?? null);
-        setSubscriptionEnd(data?.subscription_end ?? null);
+        const sub = data?.subscribed ?? false;
+        const tr = data?.is_trialing ?? false;
+        const tdl = data?.trial_days_left ?? null;
+        const end = data?.subscription_end ?? null;
+        setSubscribed(sub);
+        setIsTrialing(tr);
+        setTrialDaysLeft(tdl);
+        setSubscriptionEnd(end);
+        writeSubCache({ subscribed: sub, is_trialing: tr, trial_days_left: tdl, subscription_end: end });
       } catch {
-        setSubscribed(false);
+        // Don't flip subscribed to false on transient errors when we have a cached value;
+        // the periodic refresh will retry. Only clear cache on explicit sign-out.
       } finally {
         setSubscriptionLoading(false);
         checkInFlight.current = null;
@@ -106,7 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => checkSubscription(), 0);
         } else {
           setSubscribed(false);
+          setIsTrialing(false);
+          setTrialDaysLeft(null);
+          setSubscriptionEnd(null);
           setSubscriptionLoading(false);
+          try { localStorage.removeItem(SUB_CACHE_KEY); } catch { /* ignore */ }
         }
       }
     );
@@ -137,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { clearDecryptCache } = await import("@/lib/memories");
     clearSaltCache();
     clearDecryptCache();
+    try { localStorage.removeItem(SUB_CACHE_KEY); } catch { /* ignore */ }
     await supabase.auth.signOut();
   };
 
