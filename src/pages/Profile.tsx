@@ -763,5 +763,55 @@ export default function Profile() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Broadcast Confirmation Dialog */}
+      <AlertDialog open={bcConfirmOpen} onOpenChange={(open) => {
+        if (!bcSending) {
+          setBcConfirmOpen(open);
+          if (!open) setBcConfirmText("");
+        }
+      }}>
+        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg text-foreground">Send this broadcast?</AlertDialogTitle>
+            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
+              Audience: <strong className="text-foreground">
+                {bcAudience === "all_enabled" ? "All users with reminders ON" :
+                 bcAudience === "all_subscriptions" ? "All push subscriptions" : "Just me"}
+              </strong>
+              {bcRecipients !== null && <> · {bcRecipients} device{bcRecipients === 1 ? "" : "s"}</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl border border-border bg-secondary/40 p-3">
+            <p className="font-display text-sm font-bold text-foreground">{bcTitle}</p>
+            <p className="font-body text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{bcBody}</p>
+          </div>
+          <div className="py-1">
+            <label className="font-body text-xs text-muted-foreground block mb-1.5">
+              Type <strong className="text-foreground">SEND</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={bcConfirmText}
+              onChange={(e) => setBcConfirmText(e.target.value)}
+              placeholder="SEND"
+              disabled={bcSending}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+            />
+          </div>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel disabled={bcSending} className="flex-1 rounded-xl font-body text-sm">
+              Cancel
+            </AlertDialogCancel>
+            <button
+              onClick={handleBcSend}
+              disabled={bcConfirmText !== "SEND" || bcSending}
+              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity">
+              {bcSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {bcSending ? "Sending…" : "Send now"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>);
 }
