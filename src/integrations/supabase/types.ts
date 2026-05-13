@@ -143,6 +143,66 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_run_log: {
+        Row: {
+          comeback_sent: number
+          duration_ms: number
+          expired_cleaned: number
+          failed: number
+          id: string
+          recap_sent: number
+          run_at: string
+          streak_sent: number
+          total_users: number
+        }
+        Insert: {
+          comeback_sent?: number
+          duration_ms?: number
+          expired_cleaned?: number
+          failed?: number
+          id?: string
+          recap_sent?: number
+          run_at?: string
+          streak_sent?: number
+          total_users?: number
+        }
+        Update: {
+          comeback_sent?: number
+          duration_ms?: number
+          expired_cleaned?: number
+          failed?: number
+          id?: string
+          recap_sent?: number
+          run_at?: string
+          streak_sent?: number
+          total_users?: number
+        }
+        Relationships: []
+      }
+      engagement_sends: {
+        Row: {
+          id: string
+          metadata: Json | null
+          sent_at: string
+          trigger: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          sent_at?: string
+          trigger: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          sent_at?: string
+          trigger?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           created_at: string
