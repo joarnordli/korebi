@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
