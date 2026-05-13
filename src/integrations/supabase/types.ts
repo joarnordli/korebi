@@ -266,6 +266,42 @@ export type Database = {
         }
         Relationships: []
       }
+      push_send_events: {
+        Row: {
+          body: string | null
+          id: string
+          metadata: Json | null
+          open_count: number
+          opened_at: string | null
+          sent_at: string
+          source: string
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          id?: string
+          metadata?: Json | null
+          open_count?: number
+          opened_at?: string | null
+          sent_at?: string
+          source: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          id?: string
+          metadata?: Json | null
+          open_count?: number
+          opened_at?: string | null
+          sent_at?: string
+          source?: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -418,6 +454,7 @@ export type Database = {
         Returns: number
       }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -435,6 +472,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      record_push_open: { Args: { _event_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
