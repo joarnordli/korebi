@@ -18,6 +18,7 @@ import {
   AlertDialogCancel } from
 "@/components/ui/alert-dialog";
 import okiroLogo from "@/assets/okiro-logo.png";
+import AdminPanel from "@/components/AdminPanel";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
