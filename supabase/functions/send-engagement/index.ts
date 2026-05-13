@@ -258,6 +258,21 @@ serve(async (req) => {
       // Send to all of user's subscriptions
       let userSentOne = false;
       for (const sub of userSubs) {
+        // Log send event per push for open attribution
+        const { data: evt } = await supabase
+          .from("push_send_events")
+          .insert({
+            user_id: userId,
+            source: chosen.trigger,
+            title: chosen.title,
+            body: chosen.body,
+          })
+          .select("id")
+          .single();
+        const eventId = evt?.id as string | undefined;
+        const sep = chosen.url.includes("?") ? "&" : "?";
+        const eventUrl = eventId ? `${chosen.url}${sep}n=${eventId}` : chosen.url;
+
         try {
           const { endpoint, headers, body } = await buildPushHTTPRequest({
             privateJWK,
@@ -266,7 +281,7 @@ serve(async (req) => {
               keys: { p256dh: sub.p256dh, auth: sub.auth },
             },
             message: {
-              payload: { title: chosen.title, body: chosen.body, url: chosen.url },
+              payload: { title: chosen.title, body: chosen.body, url: eventUrl, eventId },
               adminContact: "mailto:hello@okiroapp.com",
             },
           });
