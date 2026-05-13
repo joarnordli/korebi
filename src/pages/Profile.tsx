@@ -137,10 +137,15 @@ export default function Profile() {
     const checkReminders = async () => {
       const { data } = await supabase.
       from("push_subscriptions").
-      select("id, reminder_enabled").
+      select("id, reminder_enabled, reminder_window_start, reminder_window_end").
       eq("user_id", user.id).
       limit(1);
-      setRemindersEnabled(data && data.length > 0 && data[0].reminder_enabled);
+      const row = data && data.length > 0 ? data[0] : null;
+      setRemindersEnabled(!!row?.reminder_enabled);
+      if (row) {
+        setWindowStart(row.reminder_window_start ?? 10);
+        setWindowEnd(row.reminder_window_end ?? 21);
+      }
       setRemindersLoading(false);
     };
     checkReminders();
