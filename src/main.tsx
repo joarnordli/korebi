@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initBadgeClearing } from "./lib/badge";
 
 // Register service worker for push notifications.
 // Skip in the Lovable editor preview iframe to avoid stale-cache issues.
@@ -29,5 +30,7 @@ if ("serviceWorker" in navigator) {
     });
   }
 }
+
+initBadgeClearing();
 
 createRoot(document.getElementById("root")!).render(<App />);
