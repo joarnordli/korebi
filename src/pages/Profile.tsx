@@ -188,6 +188,25 @@ export default function Profile() {
     }
   };
 
+  const handleSendTest = async () => {
+    if (sendingTest) return;
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-test-notification");
+      if (error) throw error;
+      if (data?.sent > 0) {
+        toast.success(`Test notification sent to ${data.sent} device${data.sent === 1 ? "" : "s"}. Check your phone!`);
+      } else {
+        const reason = data?.results?.[0]?.reason || "Unknown error";
+        toast.error(`Couldn't send test (${reason}). Try toggling reminders off and on.`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test notification");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const handleManageSubscription = async () => {
     setManagingSubscription(true);
     try {
@@ -473,6 +492,15 @@ export default function Profile() {
               disabled={togglingReminders} />
             }
           </div>
+          {remindersEnabled && !remindersLoading && (
+            <button
+              onClick={handleSendTest}
+              disabled={sendingTest}
+              className="mt-3 w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+              {sendingTest ? "Sending…" : "Send test notification"}
+            </button>
+          )}
         </motion.div>
 
         {/* Download Memories */}
