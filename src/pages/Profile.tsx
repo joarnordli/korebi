@@ -274,6 +274,31 @@ export default function Profile() {
     }
   };
 
+  const handleSaveWindow = async (newStart: number, newEnd: number) => {
+    if (!user || savingWindow) return;
+    if (newStart > newEnd) {
+      toast.error("Start time must be before end time.");
+      return;
+    }
+    setSavingWindow(true);
+    const prevStart = windowStart, prevEnd = windowEnd;
+    setWindowStart(newStart);
+    setWindowEnd(newEnd);
+    try {
+      const { error } = await supabase
+        .from("push_subscriptions")
+        .update({ reminder_window_start: newStart, reminder_window_end: newEnd })
+        .eq("user_id", user.id);
+      if (error) throw error;
+    } catch (err: any) {
+      setWindowStart(prevStart);
+      setWindowEnd(prevEnd);
+      toast.error(err.message || "Failed to save reminder window");
+    } finally {
+      setSavingWindow(false);
+    }
+  };
+
   const handleManageSubscription = async () => {
     setManagingSubscription(true);
     try {
