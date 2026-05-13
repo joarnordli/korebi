@@ -10,6 +10,7 @@ export function useMemories() {
     queryKey: ["memories"],
     queryFn: getMemories,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: "always", // image_url contains ephemeral blob:/signed URLs
     enabled: !!user,
   });
 
