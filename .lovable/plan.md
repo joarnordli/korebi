@@ -1,49 +1,35 @@
-# Faster cold-start plan
+## Problem
 
-The pulsing logo you see on a cold launch is the app waiting on **two slow things in series** before it can render anything:
+After the persistence work, the app hydrates the `memories` React Query cache from localStorage instantly — but the cached `image_url` values are stale:
 
-1. `useAuth` → `checkSubscription` → calls the `check-subscription` edge function → which hits **Stripe** (this is the biggest single delay, often 1–3s).
-2. `useMemories` → React Query has no cache after a cold start, so it re-fetches the memory list + signed image URLs from scratch before the feed shows.
+- For encrypted memories (the default), `image_url` is rewritten in `getMemories()` to a `blob:` URL created from `URL.createObjectURL()`. Those blob URLs only exist in the previous tab/process and are **dead on reload**.
+- For unencrypted memories, the cached value is a signed Storage URL that may also be expired.
 
-`ProtectedRoute` blocks render until both `loading` and `subscriptionLoading` are false, so the logo just sits there.
+Because the query has a 5-minute `staleTime`, React Query treats the hydrated cache as fresh and does **not** refetch on mount. The feed renders broken image placeholders until the user pull-to-refreshes (which calls `getMemories` again, re-signs URLs, and re-decrypts blobs).
 
-Below are quick, high-impact changes — no new dependencies except a small, official React Query persistence helper.
+## Fix
 
-## Changes
+Keep the snappy boot, but stop persisting the field that goes stale.
 
-### 1. Optimistic subscription gate (biggest win)
-- Cache the last `checkSubscription` result in `localStorage` (subscribed flag + timestamp).
-- On boot, hydrate `subscribed` from cache **immediately** and let `ProtectedRoute` render based on it.
-- Revalidate against the edge function in the background; if it changes, update state (and redirect to `/subscribe` only if it flipped to false).
-- Net effect: returning subscribed users skip the Stripe round-trip on the critical path entirely.
+### 1. Exclude `memories` from persistence (`src/App.tsx`)
 
-### 2. Persist React Query cache to localStorage
-- Add `@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister` (official, tiny).
-- Persist the `memories` and `hasTodayMemory` queries with a 24h max age.
-- The Memories feed renders instantly from cache on cold start, then silently refreshes.
+In the `dehydrateOptions.shouldDehydrateQuery` filter, persist **only** `hasTodayMemory` (a plain boolean — safe to hydrate). Drop `memories` from the allow-list.
 
-### 3. Skeleton instead of blank logo
-- Replace the full-screen pulsing logo in `Index.tsx` with a lightweight skeleton of the header + tab bar + 2–3 memory card placeholders (using existing `Skeleton` component).
-- Perceived load time drops even when network is slow.
+Result: on cold start the "Today" tab still renders instantly with the right state (captured / not captured, streak badge later) and the Memories tab shows the existing skeleton while the real fetch runs — same skeleton path as today, just for one quick fetch instead of forever-broken images.
 
-### 4. Lazy-load heavy Profile dependencies
-- `react-leaflet` + `leaflet` CSS and `AdminPanel` are pulled in eagerly by `Profile.tsx` and contribute to the initial JS bundle (Profile is already lazy, but its imports balloon the chunk).
-- Convert the map block and `AdminPanel` to `React.lazy` inside Profile so they only load when that section is actually visible.
+### 2. Force a fresh fetch on mount for memories (`src/hooks/useMemories.ts`)
 
-### 5. Preconnect to backend
-- Add `<link rel="preconnect">` and `<link rel="dns-prefetch">` for the Supabase URL in `index.html` so the TLS handshake to the backend overlaps with HTML parsing.
+Add `refetchOnMount: "always"` to the `memories` query as a belt-and-suspenders guard, so even if a stale entry sneaks into the in-memory cache (e.g. via React fast refresh) we still re-resolve URLs.
 
-## Out of scope (intentionally)
-- No service worker / offline caching changes (the existing `sw.js` stays as-is for push).
-- No changes to encryption, capture flow, or backend logic.
-- No bundler/Vite config changes beyond what the persist plugin needs.
+### 3. (Optional, no behavior change) Bump persistence buster
 
-## Files touched
-- `src/hooks/useAuth.tsx` — hydrate `subscribed` from localStorage, background revalidate.
-- `src/App.tsx` — wrap with `PersistQueryClientProvider`; relax `ProtectedRoute` gating.
-- `src/pages/Index.tsx` — skeleton loading state.
-- `src/pages/Profile.tsx` — lazy map + AdminPanel.
-- `index.html` — preconnect/dns-prefetch.
-- `package.json` — add the two query-persist packages.
+Change `buster: "v1"` → `"v2"` in `App.tsx` so existing users with the bad persisted `memories` payload drop it on first load instead of reading a stale entry once.
 
-Expected result: returning users see the UI in well under a second on cold start; first-time users see a skeleton instead of a blank logo screen.
+## Files
+
+- `src/App.tsx` — narrow `shouldDehydrateQuery`, bump `buster`.
+- `src/hooks/useMemories.ts` — `refetchOnMount: "always"` on the memories query.
+
+## Out of scope
+
+No changes to encryption, capture flow, auth, or the subscription cache. The optimistic auth/sub gate and lazy-loading from the previous round stay exactly as-is.
