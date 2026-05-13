@@ -1,97 +1,40 @@
-## Phase 4 — Admin viewer + push engagement analytics
+# Visual & iOS polish
 
-Two related additions to the Profile admin section: see what the cron jobs are doing, and measure how users actually respond to the notifications.
+## 1. Stop iOS from zooming on input focus
 
----
+**Cause:** iOS Safari/WebKit auto-zooms when a focused input/textarea has a computed font-size below 16px. The capture note `<textarea>` uses `text-sm` (14px), which triggers the zoom. Once zoomed, iOS doesn't always restore scale cleanly when the keyboard dismisses — that's the same root cause as issue #2.
 
-### Part A — Admin run viewer
+**Fix:**
+- `index.html`: update the viewport meta to disable user scaling so focus never triggers zoom:
+  `content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"`
+- As a belt-and-suspenders measure, bump the capture note `<textarea>` in `src/components/CaptureScreen.tsx` from `text-sm` to `text-base` (16px) so even browsers that ignore `maximum-scale` won't zoom. Keep visual size consistent by leaving padding as-is.
 
-A new collapsible card on `/profile` (admin-only, same hardcoded ID gate already used by the broadcast tool) that shows recent activity from the three log tables:
+This is the standard PWA fix and is consistent with the app already running as a standalone iOS PWA (`apple-mobile-web-app-capable`).
 
-- **Reminder runs** (last 24h) — each hourly run with: time, total subs, eligible, sent, skipped (already captured), failed, expired cleaned, duration.
-- **Engagement runs** (last 7 days) — each hourly run with: streak sent, comeback sent, recap sent, failed.
-- **Broadcast log** (last 30) — title, audience, recipients, sent / failed / expired-cleaned, time.
+## 2. Header "stuck to top" after saving
 
-Pulled directly via `supabase.from(...).select(...)` from the client. Today these tables only allow service-role access, so we add a small policy: rows are readable by clients **only when the caller's `auth.uid()` is in the admin allowlist**, enforced with a SQL helper `public.is_admin(_user_id uuid)` that hardcodes the same admin UUID server-side. (No new RPC, no edge function — just RLS.)
+This is the same iOS zoom artifact: after the textarea-induced zoom, the visual viewport stays scaled until the user pinch-zooms out. Locking `maximum-scale=1.0` (fix #1) prevents the initial zoom, so the header can never end up stuck. No additional layout change needed — verify in preview after deploying fix #1.
 
-UI is read-only, with a Refresh button and timestamps localised to the user's tz.
+## 3. Tighten Profile header
 
----
+Currently `src/pages/Profile.tsx` header uses `pt-12 pb-6` plus a `mb-6` on the Back button, leaving a large empty band above the avatar/name (visible in screenshot).
 
-### Part B — Push engagement tracking
+**Changes (`src/pages/Profile.tsx`, header block around lines 410–431):**
+- Reduce top padding: `pt-12` → `pt-4` (status bar is handled by the iOS PWA chrome, not the web view).
+- Reduce header bottom padding: `pb-6` → `pb-4`.
+- Reduce Back-button bottom margin: `mb-6` → `mb-3`.
+- Make the identity row a touch larger and more present:
+  - Avatar `w-12 h-12` → `w-14 h-14`.
+  - Title `text-xl` stays, but tighten `gap-3` → `gap-3.5`.
+- Keep email truncation as-is.
 
-Goal: for every push we send, know whether the recipient **opened the app from it**, so we can compare open-rates between trigger types (daily reminder vs. streak nudge vs. comeback vs. recap vs. broadcast).
+Result: avatar + name move up ~40–50px and feel front-and-center, matching the screenshot ask without restructuring the layout.
 
-#### Data model
+## Out of scope
+- No business logic, data, or routing changes.
+- No changes to `Index.tsx` header (only Profile was called out).
 
-One new table `push_send_events`:
-- `id` uuid pk
-- `user_id` uuid
-- `source` text — `'reminder' | 'streak' | 'comeback' | 'recap' | 'broadcast' | 'test'`
-- `title`, `body` text
-- `sent_at` timestamptz
-- `opened_at` timestamptz null
-- `open_count` int default 0 (in case user clicks twice)
-- `metadata` jsonb (e.g. broadcast_id, streak length, etc.)
-
-Service-role full access; admins can read via the same `is_admin()` helper as Part A.
-
-#### How sends get tagged
-
-Each edge function (`send-reminders`, `send-engagement`, `send-broadcast`, `send-test-notification`) inserts a row into `push_send_events` **before** firing the push, captures the new `id`, and embeds it in the push payload as `eventId`. Push payload becomes:
-
-```json
-{ "title": "...", "body": "...", "url": "/?n=<eventId>", "eventId": "<uuid>" }
-```
-
-Failed sends update the row (or just leave `opened_at` null — they simply never get attributed).
-
-#### How opens get recorded
-
-Two complementary signals so we don't miss anything:
-
-1. **Service worker** (`public/sw.js`) — on `notificationclick`, before opening the window, fire-and-forget a `fetch` to a new lightweight edge function `track-push-open` with `{ eventId }`. This works even if the user dismisses the page or the app fails to load.
-2. **App load fallback** — `App.tsx` reads the `?n=<eventId>` query param on mount and, if present, calls the same edge function. Catches cases where the SW request was blocked (Safari sometimes drops background fetches). Then strips the param from the URL.
-
-`track-push-open` (verify_jwt = false, no auth needed) just does:
-```sql
-update push_send_events
-set opened_at = coalesce(opened_at, now()), open_count = open_count + 1
-where id = $1
-```
-Idempotent — only the first open sets `opened_at`, but `open_count` keeps incrementing.
-
-#### Insights panel (admin only)
-
-A second card on Profile, "**Push performance**", showing aggregate stats for the last 30 days:
-
-- **Per source**: sent / opened / open-rate %, sorted by open-rate.
-- **Daily reminder open-rate over time** — a small sparkline (recharts) of the last 14 days.
-- **Top 5 broadcasts** by open-rate with title + sent count.
-
-Computed via two `select` queries grouped by `source` and by `date_trunc('day', sent_at)`.
-
----
-
-### Order of work
-
-1. **Migration**: `is_admin()` SQL helper, RLS reads on `reminder_run_log` / `engagement_run_log` / `broadcast_log`, new `push_send_events` table + RLS.
-2. **`track-push-open` edge function** + register in `config.toml`.
-3. Update **`send-reminders`**, **`send-engagement`**, **`send-broadcast`**, **`send-test-notification`** to insert a `push_send_events` row and embed `eventId` in payload + URL.
-4. Update **`public/sw.js`** to ping `track-push-open` on `notificationclick`.
-5. Update **`App.tsx`** to consume `?n=` on load and call the same endpoint.
-6. Add **Admin Run Viewer** card and **Push Performance** card to `Profile.tsx`.
-
-### Technical notes
-
-- The `is_admin()` helper centralises the allowlist so we don't repeat the UUID in every RLS policy. Stored as `SECURITY DEFINER`, `STABLE`, with explicit `search_path = public`.
-- `eventId` lives only in the encrypted push payload + the URL query param — no PII leaves the system.
-- `track-push-open` accepts an `eventId` UUID, validates format with Zod, and is fully unauthenticated (the eventId is the capability). Worst case: someone guesses a UUID and inflates one row's open count — acceptable, and we still have `opened_at` as a "first open" signal.
-- The SW fetch uses `keepalive: true` so it survives page navigation.
-- Existing broadcast/reminder/engagement run-log tables are unchanged; we just add SELECT policies.
-
-### Out of scope for now
-
-- Per-user notification timeline (could add later from the same data).
-- A/B testing different message copy (data is there once Part B is shipped, but no UI yet).
-- Email-style unsubscribe links — push already has the per-user toggle.
+## Verification
+- Reload preview on iPhone, open Today → tap photo → focus the note: confirm no zoom.
+- Save the memory: confirm header on Memories tab stays in place with no pinch needed.
+- Open Profile: confirm the avatar/name sit near the top with the streak card immediately visible.

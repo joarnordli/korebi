@@ -137,7 +137,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
                 onChange={(e) => setNote(e.target.value.slice(0, 160))}
                 placeholder="What made today special?"
                 rows={3}
-                className="w-full resize-none rounded-xl border border-border bg-card px-4 py-3 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full resize-none rounded-xl border border-border bg-card px-4 py-3 font-body text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               <span className="absolute bottom-3 right-3 text-xs text-muted-foreground">
                 {note.length}/160
