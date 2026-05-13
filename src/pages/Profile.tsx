@@ -66,6 +66,9 @@ export default function Profile() {
   const [remindersLoading, setRemindersLoading] = useState(true);
   const [togglingReminders, setTogglingReminders] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [windowStart, setWindowStart] = useState(10);
+  const [windowEnd, setWindowEnd] = useState(21);
+  const [savingWindow, setSavingWindow] = useState(false);
 
   // ===== Admin broadcast =====
   const ADMIN_USER_IDS = new Set<string>(["123f18ad-9a45-4dcb-9527-61cb2be423d0"]);
