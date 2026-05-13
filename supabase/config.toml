@@ -17,3 +17,5 @@ project_id = "evjpvgsmrojbnccgkoxv"
     verify_jwt = false
   [functions.send-broadcast]
     verify_jwt = false
+  [functions.send-engagement]
+    verify_jwt = false
