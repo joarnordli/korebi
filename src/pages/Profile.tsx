@@ -559,7 +559,11 @@ export default function Profile() {
           </motion.div>
         )}
 
-        {isAdmin && <AdminPanel />}
+        {isAdmin && (
+          <Suspense fallback={null}>
+            <AdminPanel />
+          </Suspense>
+        )}
 
         {/* Subscription Status */}
         <motion.div
