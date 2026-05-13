@@ -8,14 +8,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MIN_HOUR = 10;
-const MAX_HOUR = 21;
+const HARD_MIN_HOUR = 0;
+const HARD_MAX_HOUR = 23;
 
-async function getRandomHourForUser(userId: string, dateStr: string): Promise<number> {
+async function getRandomHourForUser(
+  userId: string,
+  dateStr: string,
+  windowStart: number,
+  windowEnd: number,
+): Promise<number> {
   const data = new TextEncoder().encode(userId + dateStr);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = new Uint8Array(hashBuffer);
-  return MIN_HOUR + (hashArray[0] % (MAX_HOUR - MIN_HOUR + 1));
+  const span = windowEnd - windowStart + 1;
+  return windowStart + (hashArray[0] % span);
 }
 
 function getCurrentHourInTimezone(timezone: string): number {
@@ -32,17 +38,25 @@ function getCurrentHourInTimezone(timezone: string): number {
   }
 }
 
-// Convert raw VAPID keys (base64url) to JWK for PushForge
+function getTodayInTimezone(timezone: string): string {
+  try {
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    return fmt.format(new Date()); // YYYY-MM-DD
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 function vapidKeysToJWK(publicKeyBase64url: string, privateKeyBase64url: string) {
-  // The public key is 65 bytes uncompressed: 0x04 || x (32 bytes) || y (32 bytes)
   const pubBytes = base64urlDecode(publicKeyBase64url);
   const x = base64urlEncode(pubBytes.slice(1, 33));
   const y = base64urlEncode(pubBytes.slice(33, 65));
   const d = privateKeyBase64url;
-
   return { kty: "EC", crv: "P-256", x, y, d };
 }
-
 function base64urlDecode(str: string): Uint8Array {
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
   const pad = base64.length % 4 === 0 ? "" : "=".repeat(4 - (base64.length % 4));
@@ -51,7 +65,6 @@ function base64urlDecode(str: string): Uint8Array {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
-
 function base64urlEncode(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
@@ -64,12 +77,19 @@ const messages = [
   "One photo, one memory. Go! 🌟",
   "Don't forget today's snapshot 📷",
   "Your future self will thank you 🙏",
+  "A moment from today — what was it? 💭",
+  "Tiny ritual, big memory 🌱",
+  "What's worth remembering today? ✨",
+  "One frame from your day 🎞️",
+  "Pause. Capture. Done. 🤍",
 ];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startedAt = Date.now();
 
   try {
     const supabaseAdmin = createClient(
@@ -90,7 +110,6 @@ serve(async (req) => {
     }
 
     const privateJWK = vapidKeysToJWK(vapidPublicKey, vapidPrivateKey);
-    console.log("[SEND-REMINDERS] VAPID JWK prepared");
 
     const { data: subscriptions, error } = await supabaseAdmin
       .from("push_subscriptions")
@@ -98,48 +117,78 @@ serve(async (req) => {
       .eq("reminder_enabled", true);
 
     if (error) throw error;
-    if (!subscriptions || subscriptions.length === 0) {
+
+    const total = subscriptions?.length ?? 0;
+    if (!subscriptions || total === 0) {
       console.log("[SEND-REMINDERS] No enabled subscriptions");
+      await supabaseAdmin.from("reminder_run_log").insert({
+        total_subscriptions: 0, eligible: 0, sent: 0,
+        skipped_already_captured: 0, failed: 0, expired_cleaned: 0,
+        duration_ms: Date.now() - startedAt,
+      });
       return new Response(JSON.stringify({ sent: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    function getTodayInTimezone(timezone: string): string {
-      try {
-        const fmt = new Intl.DateTimeFormat("en-CA", {
-          timeZone: timezone,
-          year: "numeric", month: "2-digit", day: "2-digit",
-        });
-        return fmt.format(new Date()); // YYYY-MM-DD
-      } catch {
-        return new Date().toISOString().slice(0, 10);
-      }
-    }
-
+    // Determine eligibility based on user's preferred window + tz + already-sent
     const eligibleChecks = await Promise.all(
       subscriptions.map(async (sub) => {
+        const windowStart = Math.max(HARD_MIN_HOUR, sub.reminder_window_start ?? 10);
+        const windowEnd = Math.min(HARD_MAX_HOUR, sub.reminder_window_end ?? 21);
         const userToday = getTodayInTimezone(sub.timezone);
         const currentHour = getCurrentHourInTimezone(sub.timezone);
-        const targetHour = await getRandomHourForUser(sub.user_id, userToday);
+        const targetHour = await getRandomHourForUser(sub.user_id, userToday, windowStart, windowEnd);
         const alreadySentToday = sub.last_sent_date === userToday;
-        // Fire if we're at or past the target hour today and haven't sent yet
-        const eligible = currentHour >= targetHour && currentHour <= MAX_HOUR && !alreadySentToday;
-        return { sub, eligible, currentHour, targetHour, userToday, alreadySentToday };
+        const eligible =
+          currentHour >= targetHour &&
+          currentHour <= windowEnd &&
+          !alreadySentToday;
+        return { sub, eligible, currentHour, targetHour, userToday, alreadySentToday, windowStart, windowEnd };
       })
     );
-    const eligible = eligibleChecks.filter((e) => e.eligible).map((e) => e.sub);
 
-    console.log(`[SEND-REMINDERS] ${eligible.length}/${subscriptions.length} eligible this hour`);
-    eligibleChecks.forEach((e) => {
-      console.log(`[SEND-REMINDERS] User ${e.sub.user_id}: tz=${e.sub.timezone} userToday=${e.userToday} currentHour=${e.currentHour}, targetHour=${e.targetHour}, alreadySent=${e.alreadySentToday}, eligible=${e.eligible}`);
-    });
+    const eligible = eligibleChecks.filter((e) => e.eligible);
+    console.log(`[SEND-REMINDERS] ${eligible.length}/${total} eligible this hour`);
+
+    // For eligible users, skip those who already captured today (one query, grouped by user)
+    let skippedAlready = 0;
+    const toSend: typeof eligible = [];
+    if (eligible.length > 0) {
+      // Build (user_id -> userToday) map and check memories table per-user.
+      // Most users have a single tz/today, so a single IN-list query is efficient.
+      const userIds = Array.from(new Set(eligible.map((e) => e.sub.user_id)));
+      const { data: recentMemories } = await supabaseAdmin
+        .from("memories")
+        .select("user_id, date")
+        .in("user_id", userIds);
+
+      const captured = new Set<string>();
+      (recentMemories ?? []).forEach((m: { user_id: string; date: string }) => {
+        captured.add(`${m.user_id}|${m.date}`);
+      });
+
+      for (const e of eligible) {
+        if (captured.has(`${e.sub.user_id}|${e.userToday}`)) {
+          skippedAlready++;
+          // Mark as sent so we don't keep re-checking each hour
+          await supabaseAdmin
+            .from("push_subscriptions")
+            .update({ last_sent_date: e.userToday })
+            .eq("id", e.sub.id);
+          console.log(`[SEND-REMINDERS] Skipping ${e.sub.user_id} — already captured ${e.userToday}`);
+        } else {
+          toSend.push(e);
+        }
+      }
+    }
 
     let sent = 0;
     let failed = 0;
     const expiredIds: string[] = [];
 
-    for (const sub of eligible) {
+    for (const e of toSend) {
+      const sub = e.sub;
       const message = messages[Math.floor(Math.random() * messages.length)];
 
       try {
@@ -147,34 +196,21 @@ serve(async (req) => {
           privateJWK,
           subscription: {
             endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh,
-              auth: sub.auth,
-            },
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           message: {
-            payload: {
-              title: "Okiro",
-              body: message,
-              url: "/",
-            },
+            payload: { title: "Okiro", body: message, url: "/" },
             adminContact: "mailto:hello@okiroapp.com",
           },
         });
 
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body,
-        });
+        const response = await fetch(endpoint, { method: "POST", headers, body });
 
         if (response.ok || response.status === 201) {
           sent++;
-          // Mark this subscription as sent for the user's local "today" so we don't double-send
-          const userToday = getTodayInTimezone(sub.timezone);
           await supabaseAdmin
             .from("push_subscriptions")
-            .update({ last_sent_date: userToday })
+            .update({ last_sent_date: e.userToday })
             .eq("id", sub.id);
           console.log(`[SEND-REMINDERS] Sent to ${sub.user_id} (status ${response.status})`);
         } else if (response.status === 410 || response.status === 404) {
@@ -186,8 +222,8 @@ serve(async (req) => {
           console.error(`[SEND-REMINDERS] Push failed for ${sub.user_id}: status ${response.status} - ${respText}`);
           failed++;
         }
-      } catch (e) {
-        console.error(`[SEND-REMINDERS] Error sending to ${sub.user_id}:`, e);
+      } catch (e2) {
+        console.error(`[SEND-REMINDERS] Error sending to ${sub.user_id}:`, e2);
         failed++;
       }
     }
@@ -200,16 +236,34 @@ serve(async (req) => {
       console.log(`[SEND-REMINDERS] Cleaned up ${expiredIds.length} expired subscriptions`);
     }
 
-    console.log(`[SEND-REMINDERS] Done: ${sent} sent, ${failed} failed`);
+    const duration = Date.now() - startedAt;
+    await supabaseAdmin.from("reminder_run_log").insert({
+      total_subscriptions: total,
+      eligible: eligible.length,
+      sent,
+      skipped_already_captured: skippedAlready,
+      failed,
+      expired_cleaned: expiredIds.length,
+      duration_ms: duration,
+    });
+
+    console.log(`[SEND-REMINDERS] Done: total=${total} eligible=${eligible.length} sent=${sent} skipped=${skippedAlready} failed=${failed} expired=${expiredIds.length} (${duration}ms)`);
 
     return new Response(
-      JSON.stringify({ sent, failed, expired_cleaned: expiredIds.length }),
+      JSON.stringify({
+        total,
+        eligible: eligible.length,
+        sent,
+        skipped_already_captured: skippedAlready,
+        failed,
+        expired_cleaned: expiredIds.length,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[SEND-REMINDERS] Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to send reminders" }),
+      JSON.stringify({ error: (error as Error).message || "Failed to send reminders" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
