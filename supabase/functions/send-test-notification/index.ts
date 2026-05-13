@@ -93,6 +93,20 @@ Deno.serve(async (req) => {
     const expiredIds: string[] = [];
 
     for (const sub of subs) {
+      // Log a send-event row up front so we can attribute opens
+      const { data: evt } = await admin
+        .from("push_send_events")
+        .insert({
+          user_id: userId,
+          source: "test",
+          title: "Okiro test ✨",
+          body: "If you see this, notifications are working!",
+        })
+        .select("id")
+        .single();
+      const eventId = evt?.id as string | undefined;
+      const url = eventId ? `/?n=${eventId}` : "/";
+
       try {
         const { endpoint, headers, body } = await buildPushHTTPRequest({
           privateJWK,
@@ -104,7 +118,8 @@ Deno.serve(async (req) => {
             payload: {
               title: "Okiro test ✨",
               body: "If you see this, notifications are working!",
-              url: "/",
+              url,
+              eventId,
             },
             adminContact: "mailto:hello@okiroapp.com",
           },
