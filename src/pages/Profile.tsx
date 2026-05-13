@@ -407,15 +407,15 @@ export default function Profile() {
 
   return (
     <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
-      <header className="shrink-0 px-6 pt-12 pb-6">
+      <header className="shrink-0 px-6 pt-4 pb-4">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+          className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
-        <div className="flex items-center gap-3">
-          <Avatar className="w-12 h-12">
+        <div className="flex items-center gap-3.5">
+          <Avatar className="w-14 h-14">
             <AvatarImage src={user?.user_metadata?.avatar_url} alt="Profile" />
             <AvatarFallback className="bg-primary/10">
               <User className="w-6 h-6 text-muted-foreground" />
