@@ -31,4 +31,6 @@ if ("serviceWorker" in navigator) {
   }
 }
 
+initBadgeClearing();
+
 createRoot(document.getElementById("root")!).render(<App />);
