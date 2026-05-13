@@ -48,6 +48,58 @@ function trackOpen(eventId) {
   }).catch(() => { /* best effort */ });
 }
 
+// ---- Badge count helpers (Cache-backed since localStorage isn't available in SW) ----
+const BADGE_CACHE = "okiro-badge-v1";
+const BADGE_KEY = "/__badge_count__";
+
+async function readBadgeCount() {
+  try {
+    const cache = await caches.open(BADGE_CACHE);
+    const res = await cache.match(BADGE_KEY);
+    if (!res) return 0;
+    const n = parseInt(await res.text(), 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function writeBadgeCount(n) {
+  try {
+    const cache = await caches.open(BADGE_CACHE);
+    await cache.put(BADGE_KEY, new Response(String(n)));
+  } catch { /* ignore */ }
+}
+
+async function setBadge(n) {
+  try {
+    if (n > 0 && self.navigator && "setAppBadge" in self.navigator) {
+      await self.navigator.setAppBadge(n);
+    } else if (self.navigator && "clearAppBadge" in self.navigator) {
+      await self.navigator.clearAppBadge();
+    }
+  } catch { /* ignore */ }
+}
+
+async function clearBadgeAndNotifications() {
+  await writeBadgeCount(0);
+  try {
+    if (self.navigator && "clearAppBadge" in self.navigator) {
+      await self.navigator.clearAppBadge();
+    }
+  } catch { /* ignore */ }
+  try {
+    const notes = await self.registration.getNotifications();
+    notes.forEach((n) => n.close());
+  } catch { /* ignore */ }
+}
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_BADGE") {
+    event.waitUntil(clearBadgeAndNotifications());
+  }
+});
+
 self.addEventListener("push", (event) => {
   let data = { title: "Okiro", body: "Time to capture today's moment ✨" };
 
