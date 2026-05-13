@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      broadcast_log: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          expired_cleaned: number
+          failed_count: number
+          id: string
+          recipients_count: number
+          sent_by: string
+          sent_count: number
+          title: string
+          url: string | null
+        }
+        Insert: {
+          audience: string
+          body: string
+          created_at?: string
+          expired_cleaned?: number
+          failed_count?: number
+          id?: string
+          recipients_count?: number
+          sent_by: string
+          sent_count?: number
+          title: string
+          url?: string | null
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          expired_cleaned?: number
+          failed_count?: number
+          id?: string
+          recipients_count?: number
+          sent_by?: string
+          sent_count?: number
+          title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
