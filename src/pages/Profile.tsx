@@ -430,7 +430,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 space-y-4" style={{ overscrollBehavior: "none" }}>
+      <div className="flex-1 overflow-y-auto px-6 pt-2 pb-4 space-y-4" style={{ overscrollBehavior: "none" }}>
         {/* Streak Counter */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
