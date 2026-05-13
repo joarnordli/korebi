@@ -30,8 +30,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const VAPID_PUBLIC_KEY = "BHax1hUAtH0nKUyh3NMz3p4JTZS3pPPldR8YpI7FaLGVefw0DLCLRXoN0vJB7sGalsvR1FgJhcvicgjWMGCH9F4";
-
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -39,6 +37,14 @@ function urlBase64ToUint8Array(base64String: string) {
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
+}
+
+function arrayBuffersEqual(a: ArrayBuffer | null, b: Uint8Array): boolean {
+  if (!a) return false;
+  const av = new Uint8Array(a);
+  if (av.length !== b.length) return false;
+  for (let i = 0; i < av.length; i++) if (av[i] !== b[i]) return false;
+  return true;
 }
 
 interface MemoryLocation {
@@ -59,6 +65,7 @@ export default function Profile() {
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [remindersLoading, setRemindersLoading] = useState(true);
   const [togglingReminders, setTogglingReminders] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
 
   const { streak, locations } = useMemories();
 
@@ -114,10 +121,31 @@ export default function Profile() {
             setTimeout(() => reject(new Error("Service worker not ready (registration may have failed)")), 5000)
           ),
         ]);
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-        });
+
+        // Always use the backend's current VAPID public key so client and server stay in sync
+        const { data: keyData, error: keyError } = await supabase.functions.invoke("get-vapid-key");
+        if (keyError || !keyData?.publicKey) {
+          throw new Error("Could not fetch push key from server");
+        }
+        const vapidKey = keyData.publicKey as string;
+        const vapidKeyBytes = urlBase64ToUint8Array(vapidKey);
+
+        // If the device already has a subscription bound to a different key, drop it first
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) {
+          const existingKey = existing.options?.applicationServerKey ?? null;
+          if (!arrayBuffersEqual(existingKey, vapidKeyBytes)) {
+            try { await existing.unsubscribe(); } catch { /* ignore */ }
+            await supabase.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
+          }
+        }
+
+        const subscription =
+          (await registration.pushManager.getSubscription()) ??
+          (await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: vapidKeyBytes,
+          }));
 
         const subJson = subscription.toJSON();
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
