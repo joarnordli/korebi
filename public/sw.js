@@ -125,7 +125,12 @@ self.addEventListener("push", (event) => {
     ],
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil((async () => {
+    await self.registration.showNotification(data.title, options);
+    const next = (await readBadgeCount()) + 1;
+    await writeBadgeCount(next);
+    await setBadge(next);
+  })());
 });
 
 self.addEventListener("notificationclick", (event) => {
@@ -137,11 +142,10 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     Promise.all([
       trackOpen(eventId),
+      clearBadgeAndNotifications(),
       clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
         for (const client of windowClients) {
           if (client.url.includes(self.location.origin) && "focus" in client) {
-            // Try to navigate the focused client to the tracked URL so the app can
-            // also pick up the ?n= fallback param.
             if ("navigate" in client) {
               try { client.navigate(url); } catch { /* ignore */ }
             }
