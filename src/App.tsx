@@ -2,7 +2,9 @@ import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,9 +17,7 @@ function PushOpenTracker() {
       const params = new URLSearchParams(window.location.search);
       const eventId = params.get("n");
       if (!eventId || !UUID_RE.test(eventId)) return;
-      // Fire-and-forget; failure is fine
       supabase.functions.invoke("track-push-open", { body: { eventId } }).catch(() => {});
-      // Strip the param so reloads don't double-count
       params.delete("n");
       const search = params.toString();
       const newUrl =
@@ -39,13 +39,31 @@ const Landing = lazy(() => import("./pages/Landing"));
 const Profile = lazy(() => import("./pages/Profile"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 24 * 60 * 60 * 1000, // keep cache for 24h so persistence is meaningful
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+const persister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  key: "okiro.rq.v1",
+  throttleTime: 1000,
+});
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, subscribed, subscriptionLoading } = useAuth();
-  if (loading || subscriptionLoading) return null;
+  // Wait only for auth state; subscription may still be revalidating in the background.
+  if (loading) return null;
   if (!user) return <Navigate to="/welcome" replace />;
-  if (!subscribed) return <Navigate to="/subscribe" replace />;
+  // If subscription has finished loading and user is not subscribed, redirect.
+  // While subscriptionLoading is true (cold first-ever load), let the app render
+  // optimistically — the periodic refresh will redirect later if needed.
+  if (!subscriptionLoading && !subscribed) return <Navigate to="/subscribe" replace />;
   return <>{children}</>;
 }
 
@@ -72,7 +90,21 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <PersistQueryClientProvider
+    client={queryClient}
+    persistOptions={{
+      persister,
+      maxAge: 24 * 60 * 60 * 1000,
+      buster: "v1",
+      dehydrateOptions: {
+        // Only persist the lightweight query keys we want to hydrate from at cold start.
+        shouldDehydrateQuery: (query) => {
+          const key = query.queryKey?.[0];
+          return key === "memories" || key === "hasTodayMemory";
+        },
+      },
+    }}
+  >
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -92,7 +124,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;

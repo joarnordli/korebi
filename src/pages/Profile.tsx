@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -18,18 +18,10 @@ import {
   AlertDialogCancel } from
 "@/components/ui/alert-dialog";
 import okiroLogo from "@/assets/okiro-logo.png";
-import AdminPanel from "@/components/AdminPanel";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 
-// Fix default marker icons for leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+// Lazy-load heavy modules so they don't bloat the initial Profile chunk.
+const AdminPanel = lazy(() => import("@/components/AdminPanel"));
+const MemoryMap = lazy(() => import("@/components/MemoryMap"));
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -464,26 +456,9 @@ export default function Profile() {
               <h2 className="font-display text-sm font-bold text-foreground">Your memory map</h2>
             </div>
             <div className="h-48 w-full">
-              <MapContainer
-                center={mapCenter}
-                zoom={locations.length === 1 ? 12 : 4}
-                scrollWheelZoom={false}
-                zoomControl={false}
-                attributionControl={false}
-                className="h-full w-full rounded-b-2xl"
-                style={{ height: "100%", width: "100%" }}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                {locations.map((loc, i) => (
-                  <Marker key={i} position={[loc.latitude, loc.longitude]}>
-                    <Popup>
-                      <span className="font-body text-xs">
-                        {loc.date}{loc.note ? ` — ${loc.note}` : ""}
-                      </span>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+              <Suspense fallback={<div className="h-full w-full bg-muted animate-pulse" />}>
+                <MemoryMap center={mapCenter} locations={locations} />
+              </Suspense>
             </div>
           </motion.div>
         )}
@@ -584,7 +559,11 @@ export default function Profile() {
           </motion.div>
         )}
 
-        {isAdmin && <AdminPanel />}
+        {isAdmin && (
+          <Suspense fallback={null}>
+            <AdminPanel />
+          </Suspense>
+        )}
 
         {/* Subscription Status */}
         <motion.div

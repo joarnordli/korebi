@@ -68,10 +68,33 @@ export default function Index() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <img src={okiroLogo} alt="Okiro" className="w-8 h-8 animate-pulse" />
-      </div>);
-
+      <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+        <div className="shrink-0 px-6 pb-4 pt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
+              <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">Okiro</h1>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+          </div>
+          <p className="font-body text-sm text-muted-foreground mt-1">One photo. One thought. Every day.</p>
+        </div>
+        <div className="px-6 pb-2">
+          <div className="h-11 bg-secondary rounded-xl animate-pulse" />
+        </div>
+        <div className="flex-1 overflow-hidden px-6 pt-4 space-y-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
+              <div className="aspect-square bg-muted animate-pulse" />
+              <div className="p-4 space-y-2">
+                <div className="h-3 w-1/3 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-2/3 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const pullProgress = Math.min(pullDistance / 80, 1);

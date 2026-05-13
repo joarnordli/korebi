@@ -28,15 +28,49 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+const SUB_CACHE_KEY = "okiro.subCache.v1";
+const SUB_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24h
+
+type SubCache = {
+  subscribed: boolean;
+  is_trialing: boolean;
+  trial_days_left: number | null;
+  subscription_end: string | null;
+  cachedAt: number;
+};
+
+function readSubCache(): SubCache | null {
+  try {
+    const raw = localStorage.getItem(SUB_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SubCache;
+    if (!parsed || typeof parsed.cachedAt !== "number") return null;
+    if (Date.now() - parsed.cachedAt > SUB_CACHE_MAX_AGE) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSubCache(c: Omit<SubCache, "cachedAt">) {
+  try {
+    localStorage.setItem(SUB_CACHE_KEY, JSON.stringify({ ...c, cachedAt: Date.now() }));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [subscribed, setSubscribed] = useState(false);
-  const [isTrialing, setIsTrialing] = useState(false);
-  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
-  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const cached = typeof window !== "undefined" ? readSubCache() : null;
+  const [subscribed, setSubscribed] = useState(cached?.subscribed ?? false);
+  const [isTrialing, setIsTrialing] = useState(cached?.is_trialing ?? false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(cached?.trial_days_left ?? null);
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(cached?.subscription_end ?? null);
+  // If we have a cached value, treat as not loading so the UI renders immediately.
+  const [subscriptionLoading, setSubscriptionLoading] = useState(!cached);
 
   // Deduplicate concurrent calls
   const checkInFlight = useRef<Promise<void> | null>(null);
@@ -47,12 +81,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data, error } = await supabase.functions.invoke("check-subscription");
         if (error) throw error;
-        setSubscribed(data?.subscribed ?? false);
-        setIsTrialing(data?.is_trialing ?? false);
-        setTrialDaysLeft(data?.trial_days_left ?? null);
-        setSubscriptionEnd(data?.subscription_end ?? null);
+        const sub = data?.subscribed ?? false;
+        const tr = data?.is_trialing ?? false;
+        const tdl = data?.trial_days_left ?? null;
+        const end = data?.subscription_end ?? null;
+        setSubscribed(sub);
+        setIsTrialing(tr);
+        setTrialDaysLeft(tdl);
+        setSubscriptionEnd(end);
+        writeSubCache({ subscribed: sub, is_trialing: tr, trial_days_left: tdl, subscription_end: end });
       } catch {
-        setSubscribed(false);
+        // Don't flip subscribed to false on transient errors when we have a cached value;
+        // the periodic refresh will retry. Only clear cache on explicit sign-out.
       } finally {
         setSubscriptionLoading(false);
         checkInFlight.current = null;
@@ -72,7 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => checkSubscription(), 0);
         } else {
           setSubscribed(false);
+          setIsTrialing(false);
+          setTrialDaysLeft(null);
+          setSubscriptionEnd(null);
           setSubscriptionLoading(false);
+          try { localStorage.removeItem(SUB_CACHE_KEY); } catch { /* ignore */ }
         }
       }
     );
@@ -103,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { clearDecryptCache } = await import("@/lib/memories");
     clearSaltCache();
     clearDecryptCache();
+    try { localStorage.removeItem(SUB_CACHE_KEY); } catch { /* ignore */ }
     await supabase.auth.signOut();
   };
 
