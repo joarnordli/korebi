@@ -215,6 +215,8 @@ export type Database = {
           last_sent_date: string | null
           p256dh: string
           reminder_enabled: boolean
+          reminder_window_end: number
+          reminder_window_start: number
           timezone: string
           user_id: string
         }
@@ -226,6 +228,8 @@ export type Database = {
           last_sent_date?: string | null
           p256dh: string
           reminder_enabled?: boolean
+          reminder_window_end?: number
+          reminder_window_start?: number
           timezone?: string
           user_id: string
         }
@@ -237,8 +241,46 @@ export type Database = {
           last_sent_date?: string | null
           p256dh?: string
           reminder_enabled?: boolean
+          reminder_window_end?: number
+          reminder_window_start?: number
           timezone?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      reminder_run_log: {
+        Row: {
+          duration_ms: number
+          eligible: number
+          expired_cleaned: number
+          failed: number
+          id: string
+          run_at: string
+          sent: number
+          skipped_already_captured: number
+          total_subscriptions: number
+        }
+        Insert: {
+          duration_ms?: number
+          eligible?: number
+          expired_cleaned?: number
+          failed?: number
+          id?: string
+          run_at?: string
+          sent?: number
+          skipped_already_captured?: number
+          total_subscriptions?: number
+        }
+        Update: {
+          duration_ms?: number
+          eligible?: number
+          expired_cleaned?: number
+          failed?: number
+          id?: string
+          run_at?: string
+          sent?: number
+          skipped_already_captured?: number
+          total_subscriptions?: number
         }
         Relationships: []
       }
