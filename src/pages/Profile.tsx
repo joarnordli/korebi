@@ -456,26 +456,9 @@ export default function Profile() {
               <h2 className="font-display text-sm font-bold text-foreground">Your memory map</h2>
             </div>
             <div className="h-48 w-full">
-              <MapContainer
-                center={mapCenter}
-                zoom={locations.length === 1 ? 12 : 4}
-                scrollWheelZoom={false}
-                zoomControl={false}
-                attributionControl={false}
-                className="h-full w-full rounded-b-2xl"
-                style={{ height: "100%", width: "100%" }}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                {locations.map((loc, i) => (
-                  <Marker key={i} position={[loc.latitude, loc.longitude]}>
-                    <Popup>
-                      <span className="font-body text-xs">
-                        {loc.date}{loc.note ? ` — ${loc.note}` : ""}
-                      </span>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+              <Suspense fallback={<div className="h-full w-full bg-muted animate-pulse" />}>
+                <MemoryMap center={mapCenter} locations={locations} />
+              </Suspense>
             </div>
           </motion.div>
         )}
