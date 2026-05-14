@@ -203,6 +203,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 160))}
               placeholder="What made this day special?"
+              aria-label="Memory note"
               rows={2}
               className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
