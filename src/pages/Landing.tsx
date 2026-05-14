@@ -177,9 +177,9 @@ function InstallGuide() {
           <Smartphone className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-display text-sm font-bold text-foreground">
+          <h2 className="font-display text-sm font-bold text-foreground">
             Get the app on your phone
-          </h3>
+          </h2>
           <p className="font-body text-xs text-muted-foreground mt-0.5">
             Add Okiro to your home screen — no app store needed
           </p>
