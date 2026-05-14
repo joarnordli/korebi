@@ -54,6 +54,7 @@ export default function Landing() {
             One moment,
             <br />
             every day.
+            <span className="sr-only"> — Okiro, a daily photo journal.</span>
           </h1>
           <p className="font-body text-base text-muted-foreground leading-relaxed max-w-xs mx-auto mb-8">
             A daily photo journal that helps you slow down, reflect, and remember what matters most.
@@ -88,9 +89,9 @@ export default function Landing() {
                 <Icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-display text-sm font-bold text-foreground mb-1">
+                <h2 className="font-display text-sm font-bold text-foreground mb-1">
                   {title}
-                </h3>
+                </h2>
                 <p className="font-body text-sm text-muted-foreground leading-relaxed">
                   {description}
                 </p>
@@ -177,9 +178,9 @@ function InstallGuide() {
           <Smartphone className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-display text-sm font-bold text-foreground">
+          <h2 className="font-display text-sm font-bold text-foreground">
             Get the app on your phone
-          </h3>
+          </h2>
           <p className="font-body text-xs text-muted-foreground mt-0.5">
             Add Okiro to your home screen — no app store needed
           </p>

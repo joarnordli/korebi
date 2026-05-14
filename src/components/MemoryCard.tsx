@@ -140,7 +140,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
       <div className="relative">
         <img
           src={imagePreview || memory.image_url}
-          alt={memory.note || "Memory"}
+          alt={memory.note ? `Daily memory from ${formatDate(memory.date)}: ${memory.note}` : `Daily memory from ${formatDate(memory.date)}`}
           className="w-full aspect-[3/4] object-cover rounded-xl"
           loading="lazy"
         />
@@ -155,6 +155,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
             />
             <button
               onClick={() => fileRef.current?.click()}
+              aria-label="Change image"
               className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-foreground/60 flex items-center justify-center backdrop-blur-sm"
             >
               <ImagePlus className="w-5 h-5 text-background" />
@@ -171,7 +172,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
           {!editing && (
             <Popover open={menuOpen} onOpenChange={setMenuOpen}>
               <PopoverTrigger asChild>
-                <button className="p-1">
+                <button className="p-1" aria-label="More options">
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </button>
               </PopoverTrigger>
@@ -202,6 +203,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 160))}
               placeholder="What made this day special?"
+              aria-label="Memory note"
               rows={2}
               className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
             />

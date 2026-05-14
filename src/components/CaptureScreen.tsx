@@ -125,6 +125,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
                   setImageFile(null);
                   if (fileRef.current) fileRef.current.value = "";
                 }}
+                aria-label="Retake photo"
                 className="absolute top-4 right-4 w-8 h-8 rounded-full bg-foreground/60 flex items-center justify-center"
               >
                 <Image className="w-4 h-4 text-background" />
@@ -136,6 +137,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
                 value={note}
                 onChange={(e) => setNote(e.target.value.slice(0, 160))}
                 placeholder="What made today special?"
+                aria-label="Memory note"
                 rows={3}
                 className="w-full resize-none rounded-xl border border-border bg-card px-4 py-3 font-body text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />

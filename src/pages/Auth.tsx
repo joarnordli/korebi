@@ -62,8 +62,8 @@ export default function Auth() {
       >
         <div className="flex items-center gap-2 justify-center mb-2">
           <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
-          <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
-            Okiro
+        <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
+            Okiro<span className="sr-only"> — One photo. One thought. Every day.</span>
           </h1>
         </div>
         <p className="font-body text-sm text-muted-foreground text-center mb-8">
@@ -106,6 +106,7 @@ export default function Auth() {
               <input
                 type="text"
                 placeholder="Your name"
+                aria-label="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -117,6 +118,7 @@ export default function Auth() {
             <input
               type="email"
               placeholder="Email"
+              aria-label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -128,6 +130,7 @@ export default function Auth() {
             <input
               type="password"
               placeholder="Password"
+              aria-label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
