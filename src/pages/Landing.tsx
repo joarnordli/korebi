@@ -88,9 +88,9 @@ export default function Landing() {
                 <Icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-display text-sm font-bold text-foreground mb-1">
+                <h2 className="font-display text-sm font-bold text-foreground mb-1">
                   {title}
-                </h3>
+                </h2>
                 <p className="font-body text-sm text-muted-foreground leading-relaxed">
                   {description}
                 </p>
