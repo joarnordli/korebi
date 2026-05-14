@@ -47,7 +47,7 @@ export default function Subscribe() {
         <div className="flex items-center gap-2 justify-center mb-6">
           <img src={okiroLogo} alt="Okiro" className="w-10 h-10" />
           <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
-            Okiro
+            Okiro<span className="sr-only"> — One photo. One thought. Every day.</span>
           </h1>
         </div>
 
