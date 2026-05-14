@@ -155,6 +155,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
             />
             <button
               onClick={() => fileRef.current?.click()}
+              aria-label="Change image"
               className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-foreground/60 flex items-center justify-center backdrop-blur-sm"
             >
               <ImagePlus className="w-5 h-5 text-background" />
