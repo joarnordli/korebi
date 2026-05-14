@@ -108,7 +108,7 @@ export default function Index() {
             <div className="flex items-center gap-2">
               <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
               <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">
-                Okiro
+                Okiro<span className="sr-only"> — One photo. One thought. Every day.</span>
               </h1>
             </div>
             <button
