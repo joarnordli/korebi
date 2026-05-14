@@ -62,14 +62,19 @@ export default function Index() {
   }, [tab]);
 
   const handleSaved = () => {
-    refresh();
+    // No refresh() — React Query handles cache updates.
+    // Calling refresh() here would flip `loading` true and flash the skeleton
+    // mid-transition, making it look like the tab switch failed.
     setTab("memories");
   };
 
-  if (loading) {
+  if (loading && memories.length === 0) {
     return (
-      <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
-        <div className="shrink-0 px-6 pb-4 pt-4">
+      <div className="min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+        <div
+          className="shrink-0 px-6 pb-4"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
@@ -100,10 +105,18 @@ export default function Index() {
   const pullProgress = Math.min(pullDistance / 80, 1);
 
   return (
-    <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+    <div className="min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
       {/* Static header */}
-      <div className="shrink-0 backdrop-blur-xl" style={{ background: "hsl(var(--background))", touchAction: "none" }} onTouchMove={(e) => e.preventDefault()}>
-        <header className="px-6 pb-4 pt-[16px]">
+      <div
+        className="shrink-0 backdrop-blur-xl"
+        style={{
+          background: "hsl(var(--background))",
+          touchAction: "none",
+          paddingTop: "env(safe-area-inset-top)",
+        }}
+        onTouchMove={(e) => e.preventDefault()}>
+        
+        <header className="px-6 pb-4 pt-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
@@ -159,7 +172,7 @@ export default function Index() {
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ overscrollBehavior: "none" }}
+        style={{ overscrollBehavior: "none", paddingBottom: "env(safe-area-inset-bottom)" }}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}>
         
