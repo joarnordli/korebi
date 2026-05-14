@@ -51,13 +51,13 @@ export default function Landing() {
         >
           <img src={okiroLogo} alt="" className="w-16 h-16 mx-auto mb-6" />
           <h1 className="font-display text-4xl font-bold text-foreground tracking-tight leading-tight mb-4">
-            One moment,
+            The photo journal app
             <br />
-            every day.
-            <span className="sr-only"> — Okiro, a daily photo journal.</span>
+            for one moment a day.
+            <span className="sr-only"> — Okiro.</span>
           </h1>
           <p className="font-body text-base text-muted-foreground leading-relaxed max-w-xs mx-auto mb-8">
-            A daily photo journal that helps you slow down, reflect, and remember what matters most.
+            Okiro is a minimalist photo journal app. Capture one photo and one thought a day to build a beautiful daily diary of the moments that matter.
           </p>
           <Link to="/auth">
             <motion.button
