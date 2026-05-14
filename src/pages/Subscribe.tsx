@@ -4,11 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import okiroLogo from "@/assets/okiro-logo.png";
-import { LogOut, Crown, Loader2 } from "lucide-react";
+import { LogOut, Crown, Loader2, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Subscribe() {
-  const { signOut, checkSubscription, subscriptionLoading } = useAuth();
+  const { user, signOut, checkSubscription, subscriptionLoading } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [memoryCount, setMemoryCount] = useState<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -21,6 +23,26 @@ export default function Subscribe() {
       window.history.replaceState({}, "", "/subscribe");
     }
   }, [checkSubscription]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { count, error } = await supabase
+          .from("memories")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if (error) throw error;
+        if (!cancelled) setMemoryCount(count ?? 0);
+      } catch {
+        // Silent fallback to generic copy
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleSubscribe = async () => {
     setLoading(true);
@@ -37,6 +59,37 @@ export default function Subscribe() {
     }
   };
 
+  const displayName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    user?.email?.split("@")[0] ??
+    "You";
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+
+  const renderHeading = () => {
+    if (memoryCount === null || memoryCount === 0) {
+      return (
+        <h2 className="font-display text-xl font-bold text-foreground mb-2">
+          Your free trial has ended
+        </h2>
+      );
+    }
+    return (
+      <h2 className="font-display text-xl font-bold text-foreground mb-2 leading-snug">
+        Subscribe to keep your{" "}
+        <span className="text-accent font-display text-2xl">{memoryCount}</span>{" "}
+        {memoryCount === 1 ? "memory" : "memories"} safe
+      </h2>
+    );
+  };
+
+  const renderSubcopy = () => {
+    if (memoryCount === null || memoryCount === 0) {
+      return "We hope you enjoyed Okiro! Subscribe to keep capturing your daily moments and preserve all your memories.";
+    }
+    return "Don't lose the moments you've already captured. Resubscribe to keep adding to your timeline.";
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       <motion.div
@@ -51,15 +104,39 @@ export default function Subscribe() {
           </h1>
         </div>
 
+        {/* Signed-in user identifier */}
+        {user && (
+          <div className="flex items-center gap-3 bg-card rounded-xl shadow-card p-3 mb-4 text-left">
+            <Avatar className="w-10 h-10 shrink-0">
+              <AvatarImage src={avatarUrl} alt={displayName} />
+              <AvatarFallback className="bg-secondary">
+                <User className="w-4 h-4 text-muted-foreground" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-body text-sm font-semibold text-foreground truncate">
+                {displayName}
+              </p>
+              <p className="font-body text-xs text-muted-foreground truncate">
+                {user.email}
+              </p>
+            </div>
+            <button
+              onClick={signOut}
+              className="font-body text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              Not you?
+            </button>
+          </div>
+        )}
+
         <div className="bg-card rounded-2xl shadow-card p-6 mb-6">
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Crown className="w-7 h-7 text-primary" />
           </div>
-          <h2 className="font-display text-xl font-bold text-foreground mb-2">
-            Your free trial has ended
-          </h2>
+          {renderHeading()}
           <p className="font-body text-sm text-muted-foreground mb-6 leading-relaxed">
-            We hope you enjoyed Okiro! Subscribe to keep capturing your daily moments and preserve all your memories.
+            {renderSubcopy()}
           </p>
 
           <div className="bg-secondary rounded-xl p-4 mb-6">

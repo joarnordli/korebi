@@ -1,37 +1,52 @@
-## Add iOS PWA Badge Count
+## Goal
 
-Use the Web Badging API so the Okiro home-screen icon shows a notification count on iOS 16.4+ (and supported Android/desktop PWAs), and clears it when the user opens the app or taps a notification.
+Make the "Your free trial has ended" screen feel personal and harder to walk away from by:
+1. Showing **who is signed in** (so users on multiple accounts know which one they're about to pay for).
+2. Highlighting **how many memories** they've already saved, as a winback hook.
 
-### Behavior
+## Changes
 
-1. **On push received** (service worker): increment a persisted badge counter and call `navigator.setAppBadge(count)` on the SW registration / `self`.
-2. **On notification click** (service worker): clear the counter and call `self.navigator.clearAppBadge()` before focusing/opening the window.
-3. **On app focus / startup** (main app): always call `navigator.clearAppBadge()` and reset the persisted counter — so launching the app from the home screen icon (not just from a notification) also wipes the badge and clears any lingering notifications.
-4. **On visibility change → visible**: same clear, so returning to the app from background also resets it.
-5. **Close lingering notifications**: in the SW activation / on app open, call `self.registration.getNotifications()` and `.close()` each one so Notification Center is emptied alongside the badge.
+All changes are in `src/pages/Subscribe.tsx`. No backend, RLS, or schema changes are needed — the SELECT policy on `memories` already lets a signed-in user read their own rows regardless of subscription state.
 
-### Technical changes
+### 1. Signed-in user identifier
 
-- **`public/sw.js`**
-  - Add a tiny IndexedDB (or `caches`-backed JSON) counter helper — `localStorage` is not available in SW. Use a single `Cache` entry (`badge-count` → `Response` with number) for simplicity, or an in-memory + `clients.matchAll` postMessage fallback.
-  - In the existing `push` handler: read counter, increment, write back, then `self.navigator.setAppBadge?.(newCount).catch(()=>{})`.
-  - In `notificationclick`: reset counter to 0, `self.navigator.clearAppBadge?.()`, and close all `self.registration.getNotifications()`.
-  - On `message` event with `{ type: "CLEAR_BADGE" }` from the page: reset counter, clear badge, close notifications. Used by the app on focus/startup.
+Pull `user` from `useAuth()` and render a small identity row above the card:
 
-- **`src/main.tsx`** (or a new tiny `src/lib/badge.ts` imported there)
-  - On load, on `visibilitychange` (when visible), and on `focus`: call `navigator.clearAppBadge?.()` and `postMessage({ type: "CLEAR_BADGE" })` to the active SW so the SW-side counter and any open notifications are also cleared.
-  - Feature-detect (`"setAppBadge" in navigator`) and silently no-op otherwise.
+- Avatar (from `user.user_metadata.avatar_url`, fallback to initials/User icon — same pattern already used in `Index.tsx`).
+- Display name (`user.user_metadata.full_name`) on top, email underneath in muted text.
+- A small "Not you? Sign out" link to the right, wired to the existing `signOut` (already imported).
 
-- **No DB / RLS / edge function changes.** Push payload already exists; we just react to it client-side.
+This makes account switching one tap away and removes the "wait, which account is this?" hesitation.
 
-### Out of scope
+### 2. Memory count for winback
 
-- Server-side unread-count source of truth. Counter is a simple "unseen pushes since last app open" — matches user's requested behavior.
-- Android/desktop are auto-supported by the same API where available.
-- No changes to auth, subscription gate, capture flow, or persisted React Query.
+Fetch the count once on mount with a lightweight query (no image URLs needed):
 
-### iOS prerequisites (already met)
+```ts
+const { count } = await supabase
+  .from("memories")
+  .select("id", { count: "exact", head: true })
+  .eq("user_id", user.id);
+```
 
-- Installed via Add to Home Screen ✅ (existing PWA manifest)
-- Notification permission granted ✅ (existing push flow)
-- Calls `setAppBadge()` ✅ (this change)
+Store in local state. Then change the card heading dynamically:
+
+- **0 memories** → keep current copy: "Your free trial has ended".
+- **1 memory** → "Subscribe to keep your 1 memory safe".
+- **2+ memories** → "Subscribe to keep your **{count} memories** safe".
+
+The number gets a slightly larger font / accent color so it pops. Subhead copy adjusts to match: "Don't lose the moments you've already captured. Resubscribe to keep adding to your timeline."
+
+While the count is loading, fall back to the current generic heading (no skeleton flicker).
+
+## Out of scope
+
+- No changes to pricing, checkout, or auth flow.
+- No new tables, edge functions, or RLS policies.
+- No changes to `Landing` or `Index` copy.
+
+## Technical notes
+
+- The Subscribe page already runs inside `SubscribeRoute`, so `user` is guaranteed to exist.
+- Use `count: "exact", head: true` so we don't pull row data — fastest possible query.
+- Wrap the count fetch in a try/catch and silently fall back to generic copy on failure.
