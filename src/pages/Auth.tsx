@@ -106,6 +106,7 @@ export default function Auth() {
               <input
                 type="text"
                 placeholder="Your name"
+                aria-label="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
