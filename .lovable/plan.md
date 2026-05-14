@@ -1,52 +1,32 @@
-## Goal
+## Problem
 
-Make the "Your free trial has ended" screen feel personal and harder to walk away from by:
-1. Showing **who is signed in** (so users on multiple accounts know which one they're about to pay for).
-2. Highlighting **how many memories** they've already saved, as a winback hook.
+After capture, the Memories tab still shows stale data and the Today tab still shows the capture UI. Only a full app restart reveals the saved memory. Cause: removing `refresh()` from `handleSaved` removed the only thing that invalidated React Query's cache. With `staleTime` of 5 min on memories and 60 s on `hasTodayMemory`, the queries never refetch, so `todayCaptured` stays `false` and the new memory never appears in the feed.
 
-## Changes
+The earlier flicker concern was actually a non-issue: `loading` is `isLoading`, which only flips true on the *initial* fetch (when there's no cached data). Background refetches set `isFetching`, not `isLoading`, so invalidating after a save will not re-show the skeleton.
 
-All changes are in `src/pages/Subscribe.tsx`. No backend, RLS, or schema changes are needed — the SELECT policy on `memories` already lets a signed-in user read their own rows regardless of subscription state.
+## Fix (single file: `src/pages/Index.tsx`)
 
-### 1. Signed-in user identifier
-
-Pull `user` from `useAuth()` and render a small identity row above the card:
-
-- Avatar (from `user.user_metadata.avatar_url`, fallback to initials/User icon — same pattern already used in `Index.tsx`).
-- Display name (`user.user_metadata.full_name`) on top, email underneath in muted text.
-- A small "Not you? Sign out" link to the right, wired to the existing `signOut` (already imported).
-
-This makes account switching one tap away and removes the "wait, which account is this?" hesitation.
-
-### 2. Memory count for winback
-
-Fetch the count once on mount with a lightweight query (no image URLs needed):
+Re-add invalidation to `handleSaved`, but keep it non-blocking and run it *after* the tab switch so the transition stays smooth:
 
 ```ts
-const { count } = await supabase
-  .from("memories")
-  .select("id", { count: "exact", head: true })
-  .eq("user_id", user.id);
+const handleSaved = () => {
+  setTab("memories");
+  // Fire-and-forget invalidation. Won't flip `loading` (isLoading) because
+  // both queries already have cached data — only `isFetching` toggles, which
+  // the UI does not gate on.
+  refresh();
+};
 ```
 
-Store in local state. Then change the card heading dynamically:
+The existing skeleton gate `loading && memories.length === 0` already prevents any skeleton flash even in edge cases.
 
-- **0 memories** → keep current copy: "Your free trial has ended".
-- **1 memory** → "Subscribe to keep your 1 memory safe".
-- **2+ memories** → "Subscribe to keep your **{count} memories** safe".
+## Verification
 
-The number gets a slightly larger font / accent color so it pops. Subhead copy adjusts to match: "Don't lose the moments you've already captured. Resubscribe to keep adding to your timeline."
-
-While the count is loading, fall back to the current generic heading (no skeleton flicker).
+1. Capture a memory.
+2. Tab transitions to Memories; the new card appears within ~1 s without a skeleton flash.
+3. Switch back to Today → shows "Today's moment captured" (not the capture UI).
+4. No need to force-quit and reopen.
 
 ## Out of scope
 
-- No changes to pricing, checkout, or auth flow.
-- No new tables, edge functions, or RLS policies.
-- No changes to `Landing` or `Index` copy.
-
-## Technical notes
-
-- The Subscribe page already runs inside `SubscribeRoute`, so `user` is guaranteed to exist.
-- Use `count: "exact", head: true` so we don't pull row data — fastest possible query.
-- Wrap the count fetch in a try/catch and silently fall back to generic copy on failure.
+CaptureScreen, useMemories, save logic, animations, backend, or RLS.

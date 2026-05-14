@@ -62,10 +62,11 @@ export default function Index() {
   }, [tab]);
 
   const handleSaved = () => {
-    // No refresh() — React Query handles cache updates.
-    // Calling refresh() here would flip `loading` true and flash the skeleton
-    // mid-transition, making it look like the tab switch failed.
     setTab("memories");
+    // Fire-and-forget invalidation. Won't flip `loading` (isLoading) since
+    // both queries already have cached data — only `isFetching` toggles,
+    // which the UI does not gate on.
+    refresh();
   };
 
   if (loading && memories.length === 0) {
