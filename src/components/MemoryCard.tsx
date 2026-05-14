@@ -140,7 +140,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
       <div className="relative">
         <img
           src={imagePreview || memory.image_url}
-          alt={memory.note || "Memory"}
+          alt={memory.note ? `Daily memory from ${formatDate(memory.date)}: ${memory.note}` : `Daily memory from ${formatDate(memory.date)}`}
           className="w-full aspect-[3/4] object-cover rounded-xl"
           loading="lazy"
         />
