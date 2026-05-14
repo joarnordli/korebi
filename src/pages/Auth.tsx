@@ -62,8 +62,8 @@ export default function Auth() {
       >
         <div className="flex items-center gap-2 justify-center mb-2">
           <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
-          <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
-            Okiro
+        <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
+            Okiro<span className="sr-only"> — One photo. One thought. Every day.</span>
           </h1>
         </div>
         <p className="font-body text-sm text-muted-foreground text-center mb-8">
