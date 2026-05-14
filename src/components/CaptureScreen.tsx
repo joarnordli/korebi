@@ -125,6 +125,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
                   setImageFile(null);
                   if (fileRef.current) fileRef.current.value = "";
                 }}
+                aria-label="Retake photo"
                 className="absolute top-4 right-4 w-8 h-8 rounded-full bg-foreground/60 flex items-center justify-center"
               >
                 <Image className="w-4 h-4 text-background" />
