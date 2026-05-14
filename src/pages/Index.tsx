@@ -105,10 +105,18 @@ export default function Index() {
   const pullProgress = Math.min(pullDistance / 80, 1);
 
   return (
-    <div className="h-screen bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+    <div className="min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
       {/* Static header */}
-      <div className="shrink-0 backdrop-blur-xl" style={{ background: "hsl(var(--background))", touchAction: "none" }} onTouchMove={(e) => e.preventDefault()}>
-        <header className="px-6 pb-4 pt-[16px]">
+      <div
+        className="shrink-0 backdrop-blur-xl"
+        style={{
+          background: "hsl(var(--background))",
+          touchAction: "none",
+          paddingTop: "env(safe-area-inset-top)",
+        }}
+        onTouchMove={(e) => e.preventDefault()}>
+        
+        <header className="px-6 pb-4 pt-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
