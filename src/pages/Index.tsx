@@ -172,7 +172,7 @@ export default function Index() {
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ overscrollBehavior: "none" }}
+        style={{ overscrollBehavior: "none", paddingBottom: "env(safe-area-inset-bottom)" }}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}>
         
