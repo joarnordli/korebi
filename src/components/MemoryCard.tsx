@@ -172,7 +172,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
           {!editing && (
             <Popover open={menuOpen} onOpenChange={setMenuOpen}>
               <PopoverTrigger asChild>
-                <button className="p-1">
+                <button className="p-1" aria-label="More options">
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </button>
               </PopoverTrigger>
