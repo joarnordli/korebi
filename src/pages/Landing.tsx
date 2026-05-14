@@ -54,6 +54,7 @@ export default function Landing() {
             One moment,
             <br />
             every day.
+            <span className="sr-only"> — Okiro, a daily photo journal.</span>
           </h1>
           <p className="font-body text-base text-muted-foreground leading-relaxed max-w-xs mx-auto mb-8">
             A daily photo journal that helps you slow down, reflect, and remember what matters most.
