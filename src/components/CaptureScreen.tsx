@@ -137,6 +137,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
                 value={note}
                 onChange={(e) => setNote(e.target.value.slice(0, 160))}
                 placeholder="What made today special?"
+                aria-label="Memory note"
                 rows={3}
                 className="w-full resize-none rounded-xl border border-border bg-card px-4 py-3 font-body text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
