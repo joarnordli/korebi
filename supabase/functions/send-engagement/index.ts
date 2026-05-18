@@ -76,18 +76,18 @@ function computeStreak(dates: string[], today: string): number {
 }
 
 // ---------- Message builders ----------
-function streakMessage(streak: number) {
-  const variants = [
-    `Don't break your ${streak}-day streak ✨`,
-    `${streak} days strong — keep it going 🔥`,
-    `One photo away from day ${streak + 1} 📸`,
+function streakMessage(streak: number): { title: string; body: string } {
+  const variants: { title: string; body: string }[] = [
+    { title: `🔥 ${streak}-day streak alive`, body: `One photo away from day ${streak + 1}.` },
+    { title: "Keep the chain going ✨", body: `You're ${streak} days in — don't stop now.` },
+    { title: `Day ${streak + 1} is calling 📸`, body: "Snap today to extend your streak." },
   ];
   return variants[Math.floor(Math.random() * variants.length)];
 }
-const comebackMessages = [
-  "We miss you 🤍 Capture today's moment",
-  "It's been a few days — what's worth remembering? 💭",
-  "Pick up where you left off 📷",
+const comebackMessages: { title: string; body: string }[] = [
+  { title: "We saved your spot 🤍", body: "Pick up where you left off." },
+  { title: "Long time, no frame 💭", body: "What's worth remembering today?" },
+  { title: "Your shelf misses you 🎞️", body: "One photo and you're back." },
 ];
 function monthName(monthIdx: number): string {
   return ["January","February","March","April","May","June","July","August","September","October","November","December"][monthIdx];
