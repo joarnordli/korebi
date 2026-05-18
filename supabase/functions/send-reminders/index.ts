@@ -189,7 +189,9 @@ serve(async (req) => {
 
     for (const e of toSend) {
       const sub = e.sub;
-      const message = messages[Math.floor(Math.random() * messages.length)];
+      const picked = reminders[Math.floor(Math.random() * reminders.length)];
+      const title = picked.title;
+      const message = picked.body;
 
       // Log send event up front for open attribution
       const { data: evt } = await supabaseAdmin
@@ -197,7 +199,7 @@ serve(async (req) => {
         .insert({
           user_id: sub.user_id,
           source: "reminder",
-          title: "Okiro",
+          title,
           body: message,
         })
         .select("id")
@@ -213,7 +215,7 @@ serve(async (req) => {
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           message: {
-            payload: { title: "Okiro", body: message, url, eventId },
+            payload: { title, body: message, url, eventId },
             adminContact: "mailto:hello@okiroapp.com",
           },
         });
