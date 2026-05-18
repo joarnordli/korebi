@@ -208,8 +208,8 @@ serve(async (req) => {
           d.setUTCDate(0); // last day of previous month
           chosen = {
             trigger: "recap",
-            title: "Okiro",
-            body: `Your ${monthName(d.getUTCMonth())} recap is ready 🎞️`,
+            title: `Your ${monthName(d.getUTCMonth())} recap is ready 🎞️`,
+            body: "Tap to relive last month, one frame at a time.",
             url: `/?month=${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
           };
         }
