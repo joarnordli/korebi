@@ -1,32 +1,67 @@
+# Playful push notification titles
+
 ## Problem
+Every push currently uses `title: "Okiro"`, so iOS renders the lockscreen as:
+**Okiro — from Okiro — {message}**
+The title slot is wasted. We can use it as a hook, and let the body expand on it.
 
-After capture, the Memories tab still shows stale data and the Today tab still shows the capture UI. Only a full app restart reveals the saved memory. Cause: removing `refresh()` from `handleSaved` removed the only thing that invalidated React Query's cache. With `staleTime` of 5 min on memories and 60 s on `hasTodayMemory`, the queries never refetch, so `todayCaptured` stays `false` and the new memory never appears in the feed.
+## Approach
+For each notification source, replace the flat message list with **title + body pairs** where:
+- **Title** = short, playful hook (≤ ~40 chars, can use emoji)
+- **Body** = a sentence that expands the hook into an action
 
-The earlier flicker concern was actually a non-issue: `loading` is `isLoading`, which only flips true on the *initial* fetch (when there's no cached data). Background refetches set `isFetching`, not `isLoading`, so invalidating after a save will not re-show the skeleton.
+Result on lockscreen: **{Hooky title} — from Okiro — {expanding body}**
 
-## Fix (single file: `src/pages/Index.tsx`)
+No schema changes. Only edge function content + the `push_send_events.title` we log.
 
-Re-add invalidation to `handleSaved`, but keep it non-blocking and run it *after* the tab switch so the transition stays smooth:
+## Files to change
 
-```ts
-const handleSaved = () => {
-  setTab("memories");
-  // Fire-and-forget invalidation. Won't flip `loading` (isLoading) because
-  // both queries already have cached data — only `isFetching` toggles, which
-  // the UI does not gate on.
-  refresh();
-};
-```
+### 1. `supabase/functions/send-reminders/index.ts`
+Replace the `messages` string array (line 74) with a `reminders` array of `{title, body}` pairs. Pick one at random per send. Pass `chosen.title` into both the `push_send_events` insert (line 200) and the `buildPushHTTPRequest` payload (line 216).
 
-The existing skeleton gate `loading && memories.length === 0` already prevents any skeleton flash even in edge cases.
+Example pairs (10–12 entries, rotating tone — curious, warm, playful, quiet):
+- `"Today, in one frame ✨"` → `"What's worth holding onto from today?"`
+- `"Psst… got a second? 📸"` → `"One photo. One memory. That's it."`
+- `"Future-you is watching 👀"` → `"Leave them something to smile about."`
+- `"Tiny ritual time 🌱"` → `"Capture today before it slips away."`
+- `"What did today look like? 🎞️"` → `"One frame is all it takes."`
+- `"Pause for a sec 🤍"` → `"Snap the moment, then carry on."`
+- `"Hey, quick one 💭"` → `"What's the photo of your day?"`
+- `"Don't let today disappear 🌙"` → `"One picture is enough."`
+- `"A moment, bottled 🫙"` → `"Add today to your memory shelf."`
+- `"Sunset check-in 🌇"` → `"Catch today before it's gone."`
 
-## Verification
+### 2. `supabase/functions/send-engagement/index.ts`
+Three triggers, each gets its own title style:
 
-1. Capture a memory.
-2. Tab transitions to Memories; the new card appears within ~1 s without a skeleton flash.
-3. Switch back to Today → shows "Today's moment captured" (not the capture UI).
-4. No need to force-quit and reopen.
+**Streak (line 79 `streakMessage`)** — return `{title, body}` instead of string:
+- `"🔥 {n}-day streak alive"` → `"One photo away from day {n+1}."`
+- `"Keep the chain going ✨"` → `"You're {n} days in — don't stop now."`
+- `"Day {n+1} is calling 📸"` → `"Snap today to extend your streak."`
+
+**Comeback (line 87 `comebackMessages`)** — convert to pairs:
+- `"We saved your spot 🤍"` → `"Pick up where you left off."`
+- `"Long time, no frame 💭"` → `"What's worth remembering today?"`
+- `"Your shelf misses you 🎞️"` → `"One photo and you're back."`
+
+**Recap (line 209)**:
+- title: `"Your {Month} recap is ready 🎞️"`
+- body: `"Tap to relive last month, one frame at a time."`
+
+Update the three `chosen = { … title: "Okiro", body: … }` blocks (lines 209, 225, 245) to use the new title from the helper/array. The `push_send_events` insert (line 267) and `buildPushHTTPRequest` payload (line 284) already read `chosen.title`, so no wiring changes there.
+
+### 3. `supabase/functions/send-test-notification/index.ts`
+Leave as-is — already uses `"Okiro test ✨"`, which is fine for the admin test path. (Optional: change to `"Test ping ✨"` so it doesn't show "Okiro from Okiro" either.) I'll make this small tweak.
+
+### 4. `supabase/functions/send-broadcast/index.ts`
+No change. Admin already supplies a custom title per broadcast.
 
 ## Out of scope
+- Service worker (`public/sw.js`) — its hard-coded `"Okiro"` fallback only fires if a push arrives with no JSON payload, which never happens from our senders.
+- Notification grouping/threading.
+- Localization (current copy is English-only, matching existing strings).
 
-CaptureScreen, useMemories, save logic, animations, backend, or RLS.
+## Verification
+1. Trigger `send-test-notification` from admin → confirm new title renders on iOS lockscreen.
+2. Manually invoke `send-reminders` in a dev window → confirm a paired title/body appears.
+3. Check `push_send_events.title` in DB shows the new hooky titles (used for open-rate analytics).

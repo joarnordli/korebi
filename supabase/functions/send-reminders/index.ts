@@ -71,17 +71,17 @@ function base64urlEncode(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-const messages = [
-  "Time to capture today's moment ✨",
-  "What's your photo of the day? 📸",
-  "One photo, one memory. Go! 🌟",
-  "Don't forget today's snapshot 📷",
-  "Your future self will thank you 🙏",
-  "A moment from today — what was it? 💭",
-  "Tiny ritual, big memory 🌱",
-  "What's worth remembering today? ✨",
-  "One frame from your day 🎞️",
-  "Pause. Capture. Done. 🤍",
+const reminders: { title: string; body: string }[] = [
+  { title: "Today, in one frame ✨", body: "What's worth holding onto from today?" },
+  { title: "Psst… got a second? 📸", body: "One photo. One memory. That's it." },
+  { title: "Future-you is watching 👀", body: "Leave them something to smile about." },
+  { title: "Tiny ritual time 🌱", body: "Capture today before it slips away." },
+  { title: "What did today look like? 🎞️", body: "One frame is all it takes." },
+  { title: "Pause for a sec 🤍", body: "Snap the moment, then carry on." },
+  { title: "Hey, quick one 💭", body: "What's the photo of your day?" },
+  { title: "Don't let today disappear 🌙", body: "One picture is enough." },
+  { title: "A moment, bottled 🫙", body: "Add today to your memory shelf." },
+  { title: "Sunset check-in 🌇", body: "Catch today before it's gone." },
 ];
 
 serve(async (req) => {
@@ -189,7 +189,9 @@ serve(async (req) => {
 
     for (const e of toSend) {
       const sub = e.sub;
-      const message = messages[Math.floor(Math.random() * messages.length)];
+      const picked = reminders[Math.floor(Math.random() * reminders.length)];
+      const title = picked.title;
+      const message = picked.body;
 
       // Log send event up front for open attribution
       const { data: evt } = await supabaseAdmin
@@ -197,7 +199,7 @@ serve(async (req) => {
         .insert({
           user_id: sub.user_id,
           source: "reminder",
-          title: "Okiro",
+          title,
           body: message,
         })
         .select("id")
@@ -213,7 +215,7 @@ serve(async (req) => {
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           message: {
-            payload: { title: "Okiro", body: message, url, eventId },
+            payload: { title, body: message, url, eventId },
             adminContact: "mailto:hello@okiroapp.com",
           },
         });

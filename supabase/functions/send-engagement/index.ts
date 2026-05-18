@@ -76,18 +76,18 @@ function computeStreak(dates: string[], today: string): number {
 }
 
 // ---------- Message builders ----------
-function streakMessage(streak: number) {
-  const variants = [
-    `Don't break your ${streak}-day streak ✨`,
-    `${streak} days strong — keep it going 🔥`,
-    `One photo away from day ${streak + 1} 📸`,
+function streakMessage(streak: number): { title: string; body: string } {
+  const variants: { title: string; body: string }[] = [
+    { title: `🔥 ${streak}-day streak alive`, body: `One photo away from day ${streak + 1}.` },
+    { title: "Keep the chain going ✨", body: `You're ${streak} days in — don't stop now.` },
+    { title: `Day ${streak + 1} is calling 📸`, body: "Snap today to extend your streak." },
   ];
   return variants[Math.floor(Math.random() * variants.length)];
 }
-const comebackMessages = [
-  "We miss you 🤍 Capture today's moment",
-  "It's been a few days — what's worth remembering? 💭",
-  "Pick up where you left off 📷",
+const comebackMessages: { title: string; body: string }[] = [
+  { title: "We saved your spot 🤍", body: "Pick up where you left off." },
+  { title: "Long time, no frame 💭", body: "What's worth remembering today?" },
+  { title: "Your shelf misses you 🎞️", body: "One photo and you're back." },
 ];
 function monthName(monthIdx: number): string {
   return ["January","February","March","April","May","June","July","August","September","October","November","December"][monthIdx];
@@ -208,8 +208,8 @@ serve(async (req) => {
           d.setUTCDate(0); // last day of previous month
           chosen = {
             trigger: "recap",
-            title: "Okiro",
-            body: `Your ${monthName(d.getUTCMonth())} recap is ready 🎞️`,
+            title: `Your ${monthName(d.getUTCMonth())} recap is ready 🎞️`,
+            body: "Tap to relive last month, one frame at a time.",
             url: `/?month=${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
           };
         }
@@ -222,10 +222,11 @@ serve(async (req) => {
           const lastStreak = sends.find((s) => s.trigger === "streak");
           const lastStreakDays = lastStreak ? daysBetween(lastStreak.sent_at.slice(0, 10), today) : 999;
           if (lastStreakDays >= 1) {
+            const m = streakMessage(streak);
             chosen = {
               trigger: "streak",
-              title: "Okiro",
-              body: streakMessage(streak),
+              title: m.title,
+              body: m.body,
               url: "/",
             };
           }
@@ -242,10 +243,11 @@ serve(async (req) => {
             const lastComeback = sends.find((s) => s.trigger === "comeback");
             const lastComebackDays = lastComeback ? daysBetween(lastComeback.sent_at.slice(0, 10), today) : 999;
             if (lastComebackDays >= 7) {
+              const cb = comebackMessages[Math.floor(Math.random() * comebackMessages.length)];
               chosen = {
                 trigger: "comeback",
-                title: "Okiro",
-                body: comebackMessages[Math.floor(Math.random() * comebackMessages.length)],
+                title: cb.title,
+                body: cb.body,
                 url: "/",
               };
             }
