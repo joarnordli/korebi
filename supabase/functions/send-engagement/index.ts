@@ -222,10 +222,11 @@ serve(async (req) => {
           const lastStreak = sends.find((s) => s.trigger === "streak");
           const lastStreakDays = lastStreak ? daysBetween(lastStreak.sent_at.slice(0, 10), today) : 999;
           if (lastStreakDays >= 1) {
+            const m = streakMessage(streak);
             chosen = {
               trigger: "streak",
-              title: "Okiro",
-              body: streakMessage(streak),
+              title: m.title,
+              body: m.body,
               url: "/",
             };
           }
@@ -242,10 +243,11 @@ serve(async (req) => {
             const lastComeback = sends.find((s) => s.trigger === "comeback");
             const lastComebackDays = lastComeback ? daysBetween(lastComeback.sent_at.slice(0, 10), today) : 999;
             if (lastComebackDays >= 7) {
+              const cb = comebackMessages[Math.floor(Math.random() * comebackMessages.length)];
               chosen = {
                 trigger: "comeback",
-                title: "Okiro",
-                body: comebackMessages[Math.floor(Math.random() * comebackMessages.length)],
+                title: cb.title,
+                body: cb.body,
                 url: "/",
               };
             }
