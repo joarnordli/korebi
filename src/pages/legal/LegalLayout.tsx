@@ -11,7 +11,7 @@ interface LegalLayoutProps {
 export default function LegalLayout({ title, updated = "May 2026", children }: LegalLayoutProps) {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[100dvh] overflow-y-auto bg-background">
       <header className="px-6 py-5 max-w-2xl mx-auto w-full flex items-center justify-between">
         <button
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/welcome"))}
