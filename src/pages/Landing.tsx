@@ -24,7 +24,7 @@ const features = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-[100dvh] overflow-y-auto bg-background flex flex-col">
       {/* Header */}
       <header className="px-6 py-5 flex items-center justify-between max-w-2xl mx-auto w-full">
         <div className="flex items-center gap-2">
