@@ -153,6 +153,15 @@ export default function Auth() {
               </>
             )}
           </motion.button>
+
+          {mode === "signup" && (
+            <p className="font-body text-xs text-muted-foreground text-center leading-relaxed pt-1">
+              By creating an account, you agree to our{" "}
+              <Link to="/terms" className="text-foreground underline underline-offset-2">Terms</Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="text-foreground underline underline-offset-2">Privacy Policy</Link>.
+            </p>
+          )}
         </form>
 
         <p className="text-center font-body text-sm text-muted-foreground mt-6">
@@ -164,6 +173,16 @@ export default function Auth() {
             {mode === "login" ? "Sign up" : "Sign in"}
           </button>
         </p>
+
+        <div className="mt-10 pt-6 border-t border-border flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-body text-xs text-muted-foreground">
+          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <span aria-hidden>·</span>
+          <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+          <span aria-hidden>·</span>
+          <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+          <span aria-hidden>·</span>
+          <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
+        </div>
       </motion.div>
     </div>
   );
