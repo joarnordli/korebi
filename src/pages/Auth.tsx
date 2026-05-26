@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import okiroLogo from "@/assets/okiro-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
