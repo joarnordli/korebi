@@ -123,6 +123,9 @@ const App = () => (
               <Route path="/welcome" element={<PublicRoute><Landing /></PublicRoute>} />
               <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
               <Route path="/subscribe" element={<SubscribeRoute><Subscribe /></SubscribeRoute>} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/cookies" element={<Cookies />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
