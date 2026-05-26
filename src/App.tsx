@@ -38,6 +38,9 @@ const Subscribe = lazy(() => import("./pages/Subscribe"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Profile = lazy(() => import("./pages/Profile"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const Cookies = lazy(() => import("./pages/legal/Cookies"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -120,6 +123,9 @@ const App = () => (
               <Route path="/welcome" element={<PublicRoute><Landing /></PublicRoute>} />
               <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
               <Route path="/subscribe" element={<SubscribeRoute><Subscribe /></SubscribeRoute>} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/cookies" element={<Cookies />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

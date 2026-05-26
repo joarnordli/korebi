@@ -263,6 +263,23 @@ function InstallGuide() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <footer className="px-6 py-8 mt-auto border-t border-border">
+        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="font-body text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Okiro
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-body text-xs text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <span aria-hidden>·</span>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <span aria-hidden>·</span>
+            <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+            <span aria-hidden>·</span>
+            <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
