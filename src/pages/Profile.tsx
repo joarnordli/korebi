@@ -740,6 +740,23 @@ export default function Profile() {
           </button>
         </motion.div>
 
+        {/* Your data */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="rounded-xl border border-border bg-card p-4 shadow-card">
+          <p className="font-body text-xs text-muted-foreground mb-2 uppercase tracking-wider">Your data</p>
+          <p className="font-body text-sm text-foreground/90 leading-relaxed mb-3">
+            Your photos are encrypted on this device before upload. We never sell your data and don't use it for ads.
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 font-body text-sm">
+            <Link to="/privacy" className="text-primary hover:underline underline-offset-2">Privacy Policy</Link>
+            <Link to="/terms" className="text-primary hover:underline underline-offset-2">Terms</Link>
+            <a href="mailto:hello@okiro.online?subject=Data%20export%20request" className="text-primary hover:underline underline-offset-2">Request data export</a>
+          </div>
+        </motion.div>
+
         {/* Sign Out */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
