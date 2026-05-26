@@ -38,6 +38,9 @@ const Subscribe = lazy(() => import("./pages/Subscribe"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Profile = lazy(() => import("./pages/Profile"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const Cookies = lazy(() => import("./pages/legal/Cookies"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
