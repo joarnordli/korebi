@@ -1,67 +1,70 @@
-# Playful push notification titles
+## Goal
 
-## Problem
-Every push currently uses `title: "Okiro"`, so iOS renders the lockscreen as:
-**Okiro — from Okiro — {message}**
-The title slot is wasted. We can use it as a hook, and let the body expand on it.
+Make Okiro reasonably compliant with consumer-protection rules (FTC Act, GDPR, CCPA/CPRA, Apple/Google store policies) by adding the standard legal pages every app needs, and link them from the bottom of the sign-up screen.
 
-## Approach
-For each notification source, replace the flat message list with **title + body pairs** where:
-- **Title** = short, playful hook (≤ ~40 chars, can use emoji)
-- **Body** = a sentence that expands the hook into an action
+## What to build
 
-Result on lockscreen: **{Hooky title} — from Okiro — {expanding body}**
+### 1. Three new static legal pages
 
-No schema changes. Only edge function content + the `push_send_events.title` we log.
+Create plain, readable Markdown-style pages under `src/pages/legal/`:
 
-## Files to change
+- **`/privacy` — Privacy Policy**
+  Covers: data we collect (email, name, photos, notes, device/push tokens, Stripe customer ID, basic analytics), why we collect it, legal basis (GDPR Art. 6), client-side encryption of photos, third-party processors (Lovable Cloud/Supabase, Stripe, push providers), data retention, international transfers, user rights (access, rectification, deletion, portability, objection), how to exercise them (Profile → Delete account, or email contact), children's policy (13+/16+ EEA), contact email, last-updated date.
 
-### 1. `supabase/functions/send-reminders/index.ts`
-Replace the `messages` string array (line 74) with a `reminders` array of `{title, body}` pairs. Pick one at random per send. Pass `chosen.title` into both the `push_send_events` insert (line 200) and the `buildPushHTTPRequest` payload (line 216).
+- **`/terms` — Terms of Service**
+  Covers: eligibility, account responsibility, acceptable use (no illegal/abusive content), subscription terms (7-day free trial, 7 NOK/week, auto-renew, cancel anytime via customer portal), refund policy, IP ownership (user owns their photos, grants Okiro a limited license to store/display them back to them), disclaimers, limitation of liability, governing law, changes to terms, contact.
 
-Example pairs (10–12 entries, rotating tone — curious, warm, playful, quiet):
-- `"Today, in one frame ✨"` → `"What's worth holding onto from today?"`
-- `"Psst… got a second? 📸"` → `"One photo. One memory. That's it."`
-- `"Future-you is watching 👀"` → `"Leave them something to smile about."`
-- `"Tiny ritual time 🌱"` → `"Capture today before it slips away."`
-- `"What did today look like? 🎞️"` → `"One frame is all it takes."`
-- `"Pause for a sec 🤍"` → `"Snap the moment, then carry on."`
-- `"Hey, quick one 💭"` → `"What's the photo of your day?"`
-- `"Don't let today disappear 🌙"` → `"One picture is enough."`
-- `"A moment, bottled 🫙"` → `"Add today to your memory shelf."`
-- `"Sunset check-in 🌇"` → `"Catch today before it's gone."`
+- **`/cookies` — Cookie & Storage Policy**
+  Covers: what we store in localStorage (auth session, React Query cache, install prompt state), no third-party advertising cookies, Stripe checkout cookies, how to clear.
 
-### 2. `supabase/functions/send-engagement/index.ts`
-Three triggers, each gets its own title style:
+Each page: simple centered max-w-2xl layout, uses existing design tokens, back link to previous page, "Last updated: May 2026".
 
-**Streak (line 79 `streakMessage`)** — return `{title, body}` instead of string:
-- `"🔥 {n}-day streak alive"` → `"One photo away from day {n+1}."`
-- `"Keep the chain going ✨"` → `"You're {n} days in — don't stop now."`
-- `"Day {n+1} is calling 📸"` → `"Snap today to extend your streak."`
+### 2. Routes
 
-**Comeback (line 87 `comebackMessages`)** — convert to pairs:
-- `"We saved your spot 🤍"` → `"Pick up where you left off."`
-- `"Long time, no frame 💭"` → `"What's worth remembering today?"`
-- `"Your shelf misses you 🎞️"` → `"One photo and you're back."`
+Add three lazy routes in `src/App.tsx` as public (no auth required):
+`/privacy`, `/terms`, `/cookies`.
 
-**Recap (line 209)**:
-- title: `"Your {Month} recap is ready 🎞️"`
-- body: `"Tap to relive last month, one frame at a time."`
+### 3. Sign-up screen compliance block
 
-Update the three `chosen = { … title: "Okiro", body: … }` blocks (lines 209, 225, 245) to use the new title from the helper/array. The `push_send_events` insert (line 267) and `buildPushHTTPRequest` payload (line 284) already read `chosen.title`, so no wiring changes there.
+In `src/pages/Auth.tsx`, below the form:
 
-### 3. `supabase/functions/send-test-notification/index.ts`
-Leave as-is — already uses `"Okiro test ✨"`, which is fine for the admin test path. (Optional: change to `"Test ping ✨"` so it doesn't show "Okiro from Okiro" either.) I'll make this small tweak.
+- **Consent microcopy** above the submit button (only in signup mode):
+  "By creating an account, you agree to our [Terms](/terms) and [Privacy Policy](/privacy)."
+  This is the FTC-recommended clear-and-conspicuous disclosure pattern; no pre-ticked boxes.
 
-### 4. `supabase/functions/send-broadcast/index.ts`
-No change. Admin already supplies a custom title per broadcast.
+- **Footer links row** at the bottom of the screen (both modes):
+  `Privacy · Terms · Cookies · Contact`
 
-## Out of scope
-- Service worker (`public/sw.js`) — its hard-coded `"Okiro"` fallback only fires if a push arrives with no JSON payload, which never happens from our senders.
-- Notification grouping/threading.
-- Localization (current copy is English-only, matching existing strings).
+### 4. Landing page footer
 
-## Verification
-1. Trigger `send-test-notification` from admin → confirm new title renders on iOS lockscreen.
-2. Manually invoke `send-reminders` in a dev window → confirm a paired title/body appears.
-3. Check `push_send_events.title` in DB shows the new hooky titles (used for open-rate analytics).
+Add the same legal links to the existing `/welcome` landing footer so they're reachable from the marketing page too (required by app stores when they review the listing).
+
+### 5. Profile screen — data rights surface
+
+In `src/pages/Profile.tsx`, add a small "Your data" section with:
+- Link to Privacy Policy
+- "Download my data" note (link to mailto contact for now — full export can come later)
+- The existing Delete account button stays (this satisfies GDPR right-to-erasure and CCPA right-to-delete).
+
+### 6. Contact email
+
+Use a single contact address everywhere (e.g. `hello@okiro.online` or `privacy@okiro.online`). Need you to confirm which.
+
+## What we are NOT adding (and why)
+
+- **ISO 27001 / SOC 2 / "safety certificate" badges** — these are real audit certifications that cost tens of thousands of dollars and require months of process work. Displaying a badge without the underlying audit is itself an FTC deceptive-practices violation. Skip until/unless you actually pursue certification.
+- **GDPR "EU Representative" badge** — only required if you have no EU establishment and target EU users at scale; can be added later via a service like Prighter if needed.
+- **Cookie consent banner** — Okiro uses only strictly-necessary storage (auth, app state) and Stripe checkout. No advertising/analytics cookies are set today, so a banner is not required under ePrivacy. If Google Analytics, Meta Pixel, etc. are added later, a CMP (e.g. Cookiebot) becomes mandatory.
+- **Age gate** — Terms state 13+ (16+ in EEA). A hard age-gate screen is only required for child-directed apps.
+
+## Open questions (one quick answer needed)
+
+1. Contact email to use on legal pages: `hello@okiro.online`, `privacy@okiro.online`, or something else?
+2. Legal entity & country for "governing law" clause in Terms — is this a Norwegian sole proprietorship / company, or personal? (Just need a country; "Norway" is fine if unincorporated.)
+
+I can use sensible defaults (`hello@okiro.online`, Norway) if you'd rather I just proceed.
+
+## Files touched
+
+- new: `src/pages/legal/Privacy.tsx`, `src/pages/legal/Terms.tsx`, `src/pages/legal/Cookies.tsx`
+- edit: `src/App.tsx` (routes), `src/pages/Auth.tsx` (consent + footer), `src/pages/Landing.tsx` (footer links), `src/pages/Profile.tsx` (data rights section)
