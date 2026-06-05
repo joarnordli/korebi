@@ -177,8 +177,10 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
                 </button>
               </PopoverTrigger>
               <PopoverContent
+                side="top"
                 align="end"
                 sideOffset={8}
+                collisionPadding={{ top: 80, bottom: 100, left: 12, right: 12 }}
                 className="w-auto p-0 bg-transparent border-0 shadow-none"
               >
                 <div className="flex flex-col items-center gap-2">
