@@ -135,7 +135,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: hasMounted.current ? 0 : index * 0.08, duration: 0.4 }}
       layout
-      className="bg-card rounded-2xl shadow-card overflow-hidden p-2"
+      className="bg-card rounded-2xl shadow-card overflow-hidden p-1"
     >
       <div className="relative">
         <img
@@ -164,7 +164,7 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
         )}
       </div>
 
-      <div className="px-2 pt-3 pb-2">
+      <div className="px-2.5 pt-2 pb-1.5">
         <div className="flex items-center justify-between">
           <p className="font-display text-sm font-semibold text-foreground">
             {formatDate(memory.date)}
