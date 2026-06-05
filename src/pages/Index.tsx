@@ -21,6 +21,7 @@ export default function Index() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const { memories, todayCaptured, streak, loading, refresh } = useMemories();
+  const relive = useRelive();
   // Note: we intentionally do NOT auto-switch tabs based on `todayCaptured`.
   // `handleSaved` switches to "memories" right after a successful capture,
   // which lets users freely navigate back to "today" afterwards (e.g. to retake/edit).
