@@ -58,10 +58,10 @@ export default function Index() {
     swiping.current = false;
     const dx = e.changedTouches[0].clientX - swipeStartX.current;
     const dy = e.changedTouches[0].clientY - swipeStartY.current;
-    // Only trigger if horizontal swipe is dominant and exceeds threshold
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      if (dx < 0 && tab === "today") setTab("memories");
-      if (dx > 0 && tab === "memories") setTab("today");
+      const idx = TAB_ORDER.indexOf(tab);
+      if (dx < 0 && idx < TAB_ORDER.length - 1) setTab(TAB_ORDER[idx + 1]);
+      if (dx > 0 && idx > 0) setTab(TAB_ORDER[idx - 1]);
     }
   }, [tab]);
 
