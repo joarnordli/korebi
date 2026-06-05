@@ -81,7 +81,8 @@ export default function Index() {
               <img src={okiroLogo} alt="Okiro" className="w-7 h-7" />
               <h1 className="font-display text-2xl font-bold text-foreground tracking-tight">Okiro<span className="sr-only"> — One photo. One thought. Every day.</span></h1>
             </div>
-          <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+            <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+          </div>
         </div>
         <div className="px-6 pb-2">
           <div className="h-11 bg-secondary rounded-xl animate-pulse" />
