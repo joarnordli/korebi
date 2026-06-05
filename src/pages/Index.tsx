@@ -1,17 +1,20 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, User, RefreshCw } from "lucide-react";
+import { Camera, BookOpen, User, RefreshCw, Shuffle } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
+import ReliveFeed from "@/components/ReliveFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
 import { toast } from "sonner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useMemories } from "@/hooks/useMemories";
+import { useRelive } from "@/hooks/useRelive";
 
-type Tab = "today" | "memories";
+type Tab = "today" | "memories" | "relive";
+const TAB_ORDER: Tab[] = ["today", "memories", "relive"];
 
 export default function Index() {
   const { user, checkSubscription } = useAuth();
