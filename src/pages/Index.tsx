@@ -83,7 +83,6 @@ export default function Index() {
             </div>
             <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
           </div>
-          <p className="font-body text-sm text-muted-foreground mt-1">One photo. One thought. Every day.</p>
         </div>
         <div className="px-6 pb-2">
           <div className="h-11 bg-secondary rounded-xl animate-pulse" />
@@ -138,9 +137,6 @@ export default function Index() {
               </Avatar>
             </button>
           </div>
-          <p className="font-body text-sm text-muted-foreground mt-1">
-            One photo. One thought. Every day.
-          </p>
         </header>
 
         <div className="px-6 pb-2">
