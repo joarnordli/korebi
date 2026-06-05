@@ -27,7 +27,12 @@ export default function Index() {
   // which lets users freely navigate back to "today" afterwards (e.g. to retake/edit).
 
   const { containerRef, pullDistance, refreshing } = usePullToRefresh({
-    onRefresh: refresh
+    onRefresh: async () => {
+      await refresh();
+      if (tab === "relive") {
+        relive.reshuffle();
+      }
+    }
   });
 
   // Handle checkout redirect
@@ -225,7 +230,6 @@ export default function Index() {
               <ReliveFeed
                 memories={relive.memories}
                 onUpdated={refresh}
-                onReshuffle={relive.reshuffle}
               />
             </motion.div>
           )}
