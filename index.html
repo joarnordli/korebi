@@ -45,7 +45,20 @@
   <meta name="twitter:description" content="A minimalist photo journal app. One photo, one thought, every day — build a beautiful daily diary of the moments that matter.">
   <meta property="og:url" content="https://okiro.online/" />
   <link rel="icon" type="image/png" href="/app-icon-512.png">
+  <script>
+    (function () {
+      try {
+        var p = localStorage.getItem('okiro.theme') || 'system';
+        var dark = p === 'dark' || (p === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', dark ? '#1a1410' : '#E8607A');
+      } catch (e) {}
+    })();
+  </script>
 </head>
+
 
   <body>
     <div id="root"></div>

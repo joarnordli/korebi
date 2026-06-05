@@ -1,6 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send, Sun, Moon, Smartphone } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
+import type { ThemePreference } from "@/lib/theme";
+
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +53,8 @@ interface MemoryLocation {
 export default function Profile() {
   const { user, signOut, subscribed, isTrialing, trialDaysLeft, subscriptionEnd, checkSubscription, subscriptionLoading } = useAuth();
   const navigate = useNavigate();
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme();
+
   const [downloading, setDownloading] = useState(false);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -638,7 +643,46 @@ export default function Profile() {
           }
         </motion.div>
 
+        {/* Appearance */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.07 }}
+          className="bg-card rounded-2xl shadow-card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Sun className="w-4 h-4 text-primary" />
+            <h2 className="font-display text-sm font-bold text-foreground">Appearance</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-2 p-1 bg-secondary rounded-xl">
+            {([
+              { value: "light", label: "Light", Icon: Sun },
+              { value: "dark", label: "Dark", Icon: Moon },
+              { value: "system", label: "Device", Icon: Smartphone },
+            ] as { value: ThemePreference; label: string; Icon: typeof Sun }[]).map(({ value, label, Icon }) => {
+              const active = themePreference === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setThemePreference(value)}
+                  className={`flex flex-col items-center justify-center gap-1 py-2 rounded-lg font-body text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}>
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="font-body text-xs text-muted-foreground mt-3">
+            Device follows your phone's light or dark setting automatically.
+          </p>
+        </motion.div>
+
         {/* Daily Reminders */}
+
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
