@@ -1,6 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send, Sun, Moon, Smartphone } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
+import type { ThemePreference } from "@/lib/theme";
+
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +53,8 @@ interface MemoryLocation {
 export default function Profile() {
   const { user, signOut, subscribed, isTrialing, trialDaysLeft, subscriptionEnd, checkSubscription, subscriptionLoading } = useAuth();
   const navigate = useNavigate();
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme();
+
   const [downloading, setDownloading] = useState(false);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
