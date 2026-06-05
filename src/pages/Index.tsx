@@ -1,23 +1,27 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, BookOpen, User, RefreshCw } from "lucide-react";
+import { Camera, BookOpen, User, RefreshCw, Shuffle } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import CaptureScreen from "@/components/CaptureScreen";
 import MemoriesFeed from "@/components/MemoriesFeed";
+import ReliveFeed from "@/components/ReliveFeed";
 import okiroLogo from "@/assets/okiro-logo.png";
 import { toast } from "sonner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useMemories } from "@/hooks/useMemories";
+import { useRelive } from "@/hooks/useRelive";
 
-type Tab = "today" | "memories";
+type Tab = "today" | "memories" | "relive";
+const TAB_ORDER: Tab[] = ["today", "memories", "relive"];
 
 export default function Index() {
   const { user, checkSubscription } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("today");
   const { memories, todayCaptured, streak, loading, refresh } = useMemories();
+  const relive = useRelive();
   // Note: we intentionally do NOT auto-switch tabs based on `todayCaptured`.
   // `handleSaved` switches to "memories" right after a successful capture,
   // which lets users freely navigate back to "today" afterwards (e.g. to retake/edit).
@@ -54,10 +58,10 @@ export default function Index() {
     swiping.current = false;
     const dx = e.changedTouches[0].clientX - swipeStartX.current;
     const dy = e.changedTouches[0].clientY - swipeStartY.current;
-    // Only trigger if horizontal swipe is dominant and exceeds threshold
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      if (dx < 0 && tab === "today") setTab("memories");
-      if (dx > 0 && tab === "memories") setTab("today");
+      const idx = TAB_ORDER.indexOf(tab);
+      if (dx < 0 && idx < TAB_ORDER.length - 1) setTab(TAB_ORDER[idx + 1]);
+      if (dx > 0 && idx > 0) setTab(TAB_ORDER[idx - 1]);
     }
   }, [tab]);
 
@@ -174,16 +178,15 @@ export default function Index() {
         </div>
 
         <AnimatePresence mode="wait">
-          {tab === "today" ?
-          <motion.div
-            key="today"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}>
-            
+          {tab === "today" && (
+            <motion.div
+              key="today"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}>
               {todayCaptured ?
-            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+                <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                   <img src={okiroLogo} alt="Okiro" className="w-10 h-10 mb-4" />
                   <p className="font-display text-lg text-foreground">
                     Today's moment captured
@@ -198,21 +201,34 @@ export default function Index() {
                     </div>
                   )}
                 </div> :
-
-            <CaptureScreen onSaved={handleSaved} />
-            }
-            </motion.div> :
-
-          <motion.div
-            key="memories"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.2 }}>
-            
+                <CaptureScreen onSaved={handleSaved} />
+              }
+            </motion.div>
+          )}
+          {tab === "memories" && (
+            <motion.div
+              key="memories"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}>
               <MemoriesFeed memories={memories} onUpdated={refresh} />
             </motion.div>
-          }
+          )}
+          {tab === "relive" && (
+            <motion.div
+              key="relive"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}>
+              <ReliveFeed
+                memories={relive.memories}
+                onUpdated={refresh}
+                onReshuffle={relive.reshuffle}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -225,20 +241,21 @@ export default function Index() {
         <div className="glass-pill pointer-events-auto flex items-center gap-1 p-1.5">
           {[
             { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
-            { key: "memories" as Tab, label: "Memories", icon: BookOpen },
+            { key: "memories" as Tab, label: "Memories", icon: BookOpen, badge: false },
+            { key: "relive" as Tab, label: "Relive", icon: Shuffle, badge: false },
           ].map(({ key, label, icon: Icon, badge }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               aria-current={tab === key ? "page" : undefined}
-              className={`flex items-center justify-center gap-2 h-11 px-5 rounded-full font-body text-sm font-medium transition-all relative ${
+              className={`nav-pill-btn flex items-center justify-center gap-1.5 h-11 px-4 rounded-full font-body text-sm font-medium transition-all relative ${
                 tab === key
                   ? "bg-foreground text-background shadow-card"
                   : "text-foreground/70 hover:text-foreground"
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {label}
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="nav-pill-label">{label}</span>
               {badge && (
                 <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
               )}

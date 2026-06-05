@@ -151,5 +151,15 @@
     }
   }
 
+  @media (max-width: 360px) {
+    .nav-pill-btn {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+    .nav-pill-label {
+      display: none;
+    }
+  }
+
 }
 
