@@ -178,16 +178,15 @@ export default function Index() {
         </div>
 
         <AnimatePresence mode="wait">
-          {tab === "today" ?
-          <motion.div
-            key="today"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}>
-            
+          {tab === "today" && (
+            <motion.div
+              key="today"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}>
               {todayCaptured ?
-            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+                <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                   <img src={okiroLogo} alt="Okiro" className="w-10 h-10 mb-4" />
                   <p className="font-display text-lg text-foreground">
                     Today's moment captured
@@ -202,21 +201,34 @@ export default function Index() {
                     </div>
                   )}
                 </div> :
-
-            <CaptureScreen onSaved={handleSaved} />
-            }
-            </motion.div> :
-
-          <motion.div
-            key="memories"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.2 }}>
-            
+                <CaptureScreen onSaved={handleSaved} />
+              }
+            </motion.div>
+          )}
+          {tab === "memories" && (
+            <motion.div
+              key="memories"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}>
               <MemoriesFeed memories={memories} onUpdated={refresh} />
             </motion.div>
-          }
+          )}
+          {tab === "relive" && (
+            <motion.div
+              key="relive"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}>
+              <ReliveFeed
+                memories={relive.memories}
+                onUpdated={refresh}
+                onReshuffle={relive.reshuffle}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -229,20 +241,21 @@ export default function Index() {
         <div className="glass-pill pointer-events-auto flex items-center gap-1 p-1.5">
           {[
             { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
-            { key: "memories" as Tab, label: "Memories", icon: BookOpen },
+            { key: "memories" as Tab, label: "Memories", icon: BookOpen, badge: false },
+            { key: "relive" as Tab, label: "Relive", icon: Shuffle, badge: false },
           ].map(({ key, label, icon: Icon, badge }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               aria-current={tab === key ? "page" : undefined}
-              className={`flex items-center justify-center gap-2 h-11 px-5 rounded-full font-body text-sm font-medium transition-all relative ${
+              className={`nav-pill-btn flex items-center justify-center gap-1.5 h-11 px-4 rounded-full font-body text-sm font-medium transition-all relative ${
                 tab === key
                   ? "bg-foreground text-background shadow-card"
                   : "text-foreground/70 hover:text-foreground"
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {label}
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="nav-pill-label">{label}</span>
               {badge && (
                 <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
               )}
