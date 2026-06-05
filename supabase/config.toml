@@ -4,7 +4,7 @@ project_id = "evjpvgsmrojbnccgkoxv"
   [functions.auth-email-hook]
     verify_jwt = false
   [functions.process-email-queue]
-    verify_jwt = false
+    verify_jwt = true
   [functions.delete-account]
     verify_jwt = false
   [functions.send-reminders]
