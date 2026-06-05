@@ -1,24 +1,57 @@
-## Reduce app padding for bigger, more engaging images
+# Dark mode support
 
-### Problem
-Horizontal padding across the Today capture screen and Memories feed is quite generous (`px-6` / `px-4`), which makes photos feel smaller than they could be on a mobile viewport.
+Add a fully themed dark palette and let users choose Light / Dark / Device default from their Profile. The PWA already reads `prefers-color-scheme` automatically once we wire it up.
 
-### Proposed changes
-Tighten padding in three components while preserving the rounded-card aesthetic and safe breathing room:
+## What gets built
 
-| File | Current | New |
-|------|---------|-----|
-| `src/components/MemoriesFeed.tsx` | `px-4 pb-24 space-y-4` | `px-2 pb-24 space-y-3` |
-| `src/components/MemoryCard.tsx` card wrapper | `p-2` | `p-1` |
-| `src/components/MemoryCard.tsx` text block | `px-2 pt-3 pb-2` | `px-2.5 pt-2 pb-1.5` |
-| `src/components/CaptureScreen.tsx` root | `px-6 pt-4 pb-8` | `px-4 pt-3 pb-8` |
-| `src/components/CaptureScreen.tsx` preview wrapper | `p-2` | `p-1` |
+1. **Dark palette in `src/index.css`**
+   - The `.dark { ... }` block already exists but was never tuned for Okiro's warm cream/orange brand. Rework the dark tokens so:
+     - Background: deep warm charcoal (not pure black) — keeps the warm Okiro feel.
+     - Cards: a touch lighter than background for elevation.
+     - Primary/accent: keep the orange hues but slightly desaturated so they don't glare on dark.
+     - Borders/muted: warm low-contrast grays.
+     - Shadows (`--shadow-card`, `--shadow-elevated`): increase opacity since shadows are subtler on dark.
+   - Update `<meta name="theme-color">` dynamically (light = `#E8607A`/current cream, dark = the new dark bg) via a small effect, so the iOS/Android status bar matches.
 
-### Why this works
-- On a 390 px-wide phone, shaving ~12 px of horizontal padding (8 px from the feed + 4 px from the card) makes the 3:4 photo area noticeably larger.
-- `space-y-3` instead of `space-y-4` keeps the feed compact without losing separation.
-- The rounded corners (`rounded-2xl` on the card, `rounded-xl` on the image) still provide enough visual framing even with 4 px of internal padding.
-- The header/tab bar stays at `px-6`, so the slightly narrower cards still feel anchored to the layout above.
+2. **Theme manager `src/lib/theme.ts`**
+   - Stores preference in `localStorage` under `okiro.theme` with values `"light" | "dark" | "system"`.
+   - `applyTheme(pref)` toggles the `.dark` class on `<html>` based on preference (resolves `system` via `matchMedia('(prefers-color-scheme: dark)')`).
+   - Subscribes to `matchMedia` changes so when preference is `system` and the OS flips, the app reacts live.
+   - Updates the `theme-color` meta tag whenever the resolved theme changes.
 
-### No other changes needed
-No routing, logic, or backend work. Purely presentational spacing tweaks.
+3. **`useTheme` hook `src/hooks/useTheme.ts`**
+   - Returns `{ preference, resolved, setPreference }`.
+   - Initializes from storage (default `"system"`) and wires the matchMedia listener.
+
+4. **Boot-time flash prevention**
+   - Add a tiny inline script in `index.html` `<head>` that reads `localStorage.okiro.theme` and adds the `.dark` class before React mounts — prevents a light→dark flash on load.
+   - Also set the initial `theme-color` meta from that script.
+
+5. **Profile UI — Appearance section**
+   - New section above "Notifications" titled **Appearance**.
+   - Three-option segmented control (Light / Dark / Device) using the existing button/toggle styling — matches the rest of Profile's minimalist look.
+   - Selecting an option calls `setPreference(...)`; takes effect immediately.
+
+6. **Audit hardcoded colors**
+   - Scan `Landing`, `Auth`, `legal/*`, `MemoryCard`, `MemoriesFeed`, `CaptureScreen`, `Profile`, `Subscribe` for any literal colors (`bg-white`, `text-black`, hex values) and swap to semantic tokens so dark mode actually looks right. Only fix what's broken under dark — don't refactor visuals in light mode.
+
+## Out of scope
+
+- No auto-scheduling (e.g. "dark at sunset") — only the three options requested.
+- No per-page overrides.
+- No new dependencies (`next-themes` is already pulled in by sonner but we won't depend on it directly to keep this lightweight and aligned with the existing CSS variable system).
+
+## Files touched
+
+- `src/index.css` — refine `.dark` tokens
+- `src/lib/theme.ts` (new)
+- `src/hooks/useTheme.ts` (new)
+- `index.html` — pre-hydration script + dynamic theme-color
+- `src/main.tsx` — call `initTheme()` early
+- `src/pages/Profile.tsx` — Appearance section
+- Spot fixes in components/pages that use literal colors
+
+## Notes
+
+- No backend changes — preference is local to each device (matches typical OS-level theme behavior).
+- The PWA manifest `theme_color` stays as the light brand color; the runtime `<meta name="theme-color">` handles dynamic switching for the browser chrome.
