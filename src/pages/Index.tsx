@@ -103,7 +103,8 @@ export default function Index() {
   const pullProgress = Math.min(pullDistance / 80, 1);
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+    <div className="relative min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+
       {/* Static header */}
       <div
         className="shrink-0 backdrop-blur-xl"
