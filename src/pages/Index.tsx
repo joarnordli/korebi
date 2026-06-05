@@ -84,10 +84,8 @@ export default function Index() {
             <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
           </div>
         </div>
-        <div className="px-6 pb-2">
-          <div className="h-11 bg-secondary rounded-xl animate-pulse" />
-        </div>
         <div className="flex-1 overflow-hidden px-6 pt-4 space-y-4">
+
           {[0, 1, 2].map((i) => (
             <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
               <div className="aspect-square bg-muted animate-pulse" />
