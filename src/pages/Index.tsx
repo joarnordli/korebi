@@ -137,39 +137,19 @@ export default function Index() {
           </div>
         </header>
 
-        <div className="px-6 pb-2">
-          <div className="flex bg-secondary rounded-xl p-1">
-            {[
-            { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
-            { key: "memories" as Tab, label: "Memories", icon: BookOpen }].
-            map(({ key, label, icon: Icon, badge }) =>
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-body text-sm font-medium transition-all relative ${
-              tab === key ?
-              "bg-background text-foreground shadow-card" :
-              "text-muted-foreground"}`
-              }>
-              
-                <Icon className="w-4 h-4" />
-                {label}
-                {badge &&
-              <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
-              }
-              </button>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Scrollable content */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ overscrollBehavior: "none", paddingBottom: "env(safe-area-inset-bottom)" }}
+        style={{
+          overscrollBehavior: "none",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 84px)",
+        }}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}>
+
         
         {/* Pull-to-refresh indicator */}
         <div
