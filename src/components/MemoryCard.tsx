@@ -219,16 +219,16 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+                className="glass-pill flex-1 h-11 rounded-full text-foreground font-body text-sm font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-95 disabled:opacity-60"
               >
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-4 h-4" />
                 {saving ? "Saving…" : "Save"}
               </button>
               <button
                 onClick={handleCancel}
-                className="py-2 px-3 rounded-lg bg-secondary text-muted-foreground font-body text-xs font-semibold flex items-center justify-center gap-1.5"
+                className="glass-pill h-11 px-5 rounded-full text-foreground/70 font-body text-sm font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-95"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
                 Cancel
               </button>
             </div>
