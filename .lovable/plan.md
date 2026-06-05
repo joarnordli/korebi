@@ -1,11 +1,11 @@
-Add tap-to-scroll-top behavior: tapping the static header background scrolls the main content area smoothly to the top, mirroring the native iOS status-bar tap pattern.
+Replace the popover menu on each memory card with two vertically stacked, circular glass buttons (Share on top, Edit below) — no labels, separated by a gap, inside a transparent shared container.
 
-Changes in `src/pages/Index.tsx`:
-- Attach `onClick` to the static header wrapper that calls `containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })`.
-- Prevent conflicts with interactive elements:
-  - The profile `<button>` already stops the event from reaching the scroll handler via its own `onClick` + `navigate("/profile")`, but to be safe we add `e.stopPropagation()` on the profile button's click handler.
-  - The scroll-to-top handler checks `e.target === e.currentTarget` OR uses `closest('button, a, [role="button"]')` to bail out when the tap originates from any interactive child (profile avatar, future header buttons).
-- Add `cursor-pointer` only to the non-interactive header area (logo + title), leaving the profile button's existing cursor behavior intact.
-- No changes to swipe handlers, pull-to-refresh, or the floating glass nav.
+Changes in `src/components/MemoryCard.tsx`:
+- Keep the three-dot `MoreHorizontal` trigger and `Popover` state, but restyle the `PopoverContent`:
+  - Override default popover styling by passing `className` with `bg-transparent border-0 shadow-none p-0 w-auto` so the container becomes invisible.
+  - Inside, render a `flex flex-col gap-2 items-center` wrapper holding two circular icon buttons.
+- Each button: `w-11 h-11 rounded-full glass-pill flex items-center justify-center` (reuses the existing `.glass-pill` token already used by the bottom nav for consistent iOS glass look). Icons only — `Share2` on top, `Pencil` below. Add `aria-label` for accessibility.
+- Remove the inline text labels ("Edit", "Share", "Sharing…"); show transient state via icon opacity/disabled state only (button gets `disabled:opacity-50` while sharing).
+- Use `side="bottom" align="end"` (current default) so the stack opens just under the dots.
 
-Out of scope: tapping the iOS status bar itself (not reachable from web/Capacitor web view without native plugin) — this gives the same UX by making the visible header tappable.
+No changes to share/edit logic, glass token, or other files.

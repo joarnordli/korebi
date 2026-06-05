@@ -176,22 +176,28 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-36 p-1.5">
-                <button
-                  onClick={() => { setMenuOpen(false); setEditing(true); }}
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 font-body text-sm text-foreground hover:bg-accent transition-colors"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </button>
-                <button
-                  onClick={handleShare}
-                  disabled={sharing}
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 font-body text-sm text-foreground hover:bg-accent transition-colors disabled:opacity-50"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  {sharing ? "Sharing…" : "Share"}
-                </button>
+              <PopoverContent
+                align="end"
+                sideOffset={8}
+                className="w-auto p-0 bg-transparent border-0 shadow-none"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    onClick={handleShare}
+                    disabled={sharing}
+                    aria-label="Share memory"
+                    className="glass-pill w-11 h-11 rounded-full flex items-center justify-center text-foreground transition-transform active:scale-95 disabled:opacity-50"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false); setEditing(true); }}
+                    aria-label="Edit memory"
+                    className="glass-pill w-11 h-11 rounded-full flex items-center justify-center text-foreground transition-transform active:scale-95"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
               </PopoverContent>
             </Popover>
           )}
