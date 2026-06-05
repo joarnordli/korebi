@@ -116,13 +116,19 @@ export default function Index() {
 
       {/* Static header */}
       <div
-        className="shrink-0 backdrop-blur-xl"
+        className="shrink-0 backdrop-blur-xl cursor-pointer"
         style={{
           background: "hsl(var(--background))",
           touchAction: "none",
           paddingTop: "env(safe-area-inset-top)",
         }}
-        onTouchMove={(e) => e.preventDefault()}>
+        onTouchMove={(e) => e.preventDefault()}
+        onClick={(e) => {
+          // Bail out if tap originated from an interactive child
+          // (profile button, future links, etc.).
+          if ((e.target as HTMLElement).closest('button, a, [role="button"]')) return;
+          containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        }}>
         
         <header className="px-6 pb-4 pt-4">
           <div className="flex items-center justify-between">
@@ -133,7 +139,10 @@ export default function Index() {
               </h1>
             </div>
             <button
-              onClick={() => navigate("/profile")}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate("/profile");
+              }}
               className="rounded-full"
               title="Profile">
               
