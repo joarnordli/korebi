@@ -51,7 +51,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
   };
 
   return (
-    <div className="flex flex-col items-center px-6 pt-4 pb-8">
+    <div className="flex flex-col items-center px-4 pt-3 pb-8">
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -113,7 +113,7 @@ export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-xs flex flex-col gap-4"
           >
-            <div className="relative rounded-2xl overflow-hidden shadow-elevated bg-card p-2">
+            <div className="relative rounded-2xl overflow-hidden shadow-elevated bg-card p-1">
               <img
                 src={preview}
                 alt="Today's capture"
