@@ -2,6 +2,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initBadgeClearing } from "./lib/badge";
+import { initTheme } from "./lib/theme";
+
+initTheme();
+
 
 // Register service worker for push notifications.
 // Skip in the Lovable editor preview iframe to avoid stale-cache issues.
