@@ -214,6 +214,37 @@ export default function Index() {
           }
         </AnimatePresence>
       </div>
+
+      {/* Bottom glass tab bar */}
+      <nav
+        className="glass-bar absolute bottom-0 left-0 right-0 px-4 pt-2"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
+      >
+        <div className="flex gap-2 max-w-md mx-auto">
+          {[
+            { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
+            { key: "memories" as Tab, label: "Memories", icon: BookOpen },
+          ].map(({ key, label, icon: Icon, badge }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              aria-current={tab === key ? "page" : undefined}
+              className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] rounded-xl font-body text-sm font-medium transition-all relative ${
+                tab === key
+                  ? "bg-secondary text-foreground shadow-card"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+              {badge && (
+                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>);
+
 
 }
