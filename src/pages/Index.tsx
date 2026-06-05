@@ -216,12 +216,13 @@ export default function Index() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom glass tab bar */}
+      {/* Floating glass tab bar */}
       <nav
-        className="glass-bar absolute bottom-0 left-0 right-0 px-4 pt-2"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
+        className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+        aria-label="Primary"
       >
-        <div className="flex gap-2 max-w-md mx-auto">
+        <div className="glass-pill pointer-events-auto flex items-center gap-1 p-1.5">
           {[
             { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
             { key: "memories" as Tab, label: "Memories", icon: BookOpen },
@@ -230,21 +231,22 @@ export default function Index() {
               key={key}
               onClick={() => setTab(key)}
               aria-current={tab === key ? "page" : undefined}
-              className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] rounded-xl font-body text-sm font-medium transition-all relative ${
+              className={`flex items-center justify-center gap-2 h-11 px-5 rounded-full font-body text-sm font-medium transition-all relative ${
                 tab === key
-                  ? "bg-secondary text-foreground shadow-card"
-                  : "text-muted-foreground"
+                  ? "bg-foreground text-background shadow-card"
+                  : "text-foreground/70 hover:text-foreground"
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-4 h-4" />
               {label}
               {badge && (
-                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
               )}
             </button>
           ))}
         </div>
       </nav>
+
     </div>);
 
 
