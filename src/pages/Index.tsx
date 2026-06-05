@@ -84,10 +84,8 @@ export default function Index() {
             <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
           </div>
         </div>
-        <div className="px-6 pb-2">
-          <div className="h-11 bg-secondary rounded-xl animate-pulse" />
-        </div>
         <div className="flex-1 overflow-hidden px-6 pt-4 space-y-4">
+
           {[0, 1, 2].map((i) => (
             <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
               <div className="aspect-square bg-muted animate-pulse" />
@@ -105,7 +103,8 @@ export default function Index() {
   const pullProgress = Math.min(pullDistance / 80, 1);
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+    <div className="relative min-h-[100dvh] h-[100dvh] bg-background flex flex-col max-w-md mx-auto overflow-hidden">
+
       {/* Static header */}
       <div
         className="shrink-0 backdrop-blur-xl"
@@ -139,39 +138,19 @@ export default function Index() {
           </div>
         </header>
 
-        <div className="px-6 pb-2">
-          <div className="flex bg-secondary rounded-xl p-1">
-            {[
-            { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
-            { key: "memories" as Tab, label: "Memories", icon: BookOpen }].
-            map(({ key, label, icon: Icon, badge }) =>
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-body text-sm font-medium transition-all relative ${
-              tab === key ?
-              "bg-background text-foreground shadow-card" :
-              "text-muted-foreground"}`
-              }>
-              
-                <Icon className="w-4 h-4" />
-                {label}
-                {badge &&
-              <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
-              }
-              </button>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Scrollable content */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ overscrollBehavior: "none", paddingBottom: "env(safe-area-inset-bottom)" }}
+        style={{
+          overscrollBehavior: "none",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 84px)",
+        }}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}>
+
         
         {/* Pull-to-refresh indicator */}
         <div
@@ -236,6 +215,37 @@ export default function Index() {
           }
         </AnimatePresence>
       </div>
+
+      {/* Bottom glass tab bar */}
+      <nav
+        className="glass-bar absolute bottom-0 left-0 right-0 px-4 pt-2"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
+      >
+        <div className="flex gap-2 max-w-md mx-auto">
+          {[
+            { key: "today" as Tab, label: "Today", icon: Camera, badge: !todayCaptured },
+            { key: "memories" as Tab, label: "Memories", icon: BookOpen },
+          ].map(({ key, label, icon: Icon, badge }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              aria-current={tab === key ? "page" : undefined}
+              className={`flex-1 flex items-center justify-center gap-2 min-h-[48px] rounded-xl font-body text-sm font-medium transition-all relative ${
+                tab === key
+                  ? "bg-secondary text-foreground shadow-card"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+              {badge && (
+                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>);
+
 
 }

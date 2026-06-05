@@ -1,57 +1,40 @@
-# Dark mode support
+## Move the Today / Memories switcher to the bottom of the screen
 
-Add a fully themed dark palette and let users choose Light / Dark / Device default from their Profile. The PWA already reads `prefers-color-scheme` automatically once we wire it up.
+Right now the tab switcher sits in the header alongside the Okiro logo and avatar. We'll relocate it to a floating bottom bar styled like a native iOS glass control, so the photo content above gets even more room and the primary navigation lives where the thumb naturally rests.
 
-## What gets built
+### Changes
 
-1. **Dark palette in `src/index.css`**
-   - The `.dark { ... }` block already exists but was never tuned for Okiro's warm cream/orange brand. Rework the dark tokens so:
-     - Background: deep warm charcoal (not pure black) — keeps the warm Okiro feel.
-     - Cards: a touch lighter than background for elevation.
-     - Primary/accent: keep the orange hues but slightly desaturated so they don't glare on dark.
-     - Borders/muted: warm low-contrast grays.
-     - Shadows (`--shadow-card`, `--shadow-elevated`): increase opacity since shadows are subtler on dark.
-   - Update `<meta name="theme-color">` dynamically (light = `#E8607A`/current cream, dark = the new dark bg) via a small effect, so the iOS/Android status bar matches.
+1. **`src/pages/Index.tsx`**
+   - Remove the tab segmented control from the header block. Header keeps only the Okiro wordmark + profile avatar, making it visibly slimmer.
+   - Add a new floating bottom bar fixed inside the app's `max-w-md` shell:
+     - Positioned with `absolute bottom-0` inside the existing flex shell (so it stays inside the locked PWA viewport, no overlap with iOS home indicator).
+     - Padding-bottom uses `env(safe-area-inset-bottom)` so it sits above the home indicator on iPhone.
+     - Two tabs (Today / Memories) with the same icons + "new" badge dot logic as today.
+   - Update the scrollable content container's `paddingBottom` to reserve space for the bar (roughly `calc(env(safe-area-inset-bottom) + 76px)`) so the last memory card isn't hidden behind the glass.
+   - Apply the same treatment to the loading skeleton so the layout doesn't jump.
 
-2. **Theme manager `src/lib/theme.ts`**
-   - Stores preference in `localStorage` under `okiro.theme` with values `"light" | "dark" | "system"`.
-   - `applyTheme(pref)` toggles the `.dark` class on `<html>` based on preference (resolves `system` via `matchMedia('(prefers-color-scheme: dark)')`).
-   - Subscribes to `matchMedia` changes so when preference is `system` and the OS flips, the app reacts live.
-   - Updates the `theme-color` meta tag whenever the resolved theme changes.
+2. **Glassmorphism styling (semantic, theme-aware)**
+   - Add a small reusable utility in `src/index.css` (e.g. `.glass-bar`) that combines:
+     - `backdrop-filter: blur(24px) saturate(180%);` with `-webkit-backdrop-filter` for iOS Safari.
+     - Translucent background using existing tokens: `background: hsl(var(--background) / 0.72);`
+     - Hairline top border: `border-top: 1px solid hsl(var(--border) / 0.6);`
+     - Subtle top shadow for lift.
+   - Works in light and dark mode automatically via the tokens we just added for dark mode.
+   - Fallback: when `backdrop-filter` is not supported, fall back to opaque `hsl(var(--background))` via `@supports not`.
 
-3. **`useTheme` hook `src/hooks/useTheme.ts`**
-   - Returns `{ preference, resolved, setPreference }`.
-   - Initializes from storage (default `"system"`) and wires the matchMedia listener.
+3. **Active tab affordance**
+   - Selected tab: filled pill (`bg-secondary text-foreground`) with icon + label.
+   - Inactive tab: `text-muted-foreground`, icon + label, no fill.
+   - Tap target ≥ 44px tall to match iOS HIG.
+   - Keep the existing accent dot on Today when the user hasn't captured yet.
 
-4. **Boot-time flash prevention**
-   - Add a tiny inline script in `index.html` `<head>` that reads `localStorage.okiro.theme` and adds the `.dark` class before React mounts — prevents a light→dark flash on load.
-   - Also set the initial `theme-color` meta from that script.
+### Out of scope
 
-5. **Profile UI — Appearance section**
-   - New section above "Notifications" titled **Appearance**.
-   - Three-option segmented control (Light / Dark / Device) using the existing button/toggle styling — matches the rest of Profile's minimalist look.
-   - Selecting an option calls `setPreference(...)`; takes effect immediately.
+- No changes to swipe-to-switch gestures, capture flow, or memories feed itself.
+- No new dependencies.
+- No backend changes.
 
-6. **Audit hardcoded colors**
-   - Scan `Landing`, `Auth`, `legal/*`, `MemoryCard`, `MemoriesFeed`, `CaptureScreen`, `Profile`, `Subscribe` for any literal colors (`bg-white`, `text-black`, hex values) and swap to semantic tokens so dark mode actually looks right. Only fix what's broken under dark — don't refactor visuals in light mode.
+### Files
 
-## Out of scope
-
-- No auto-scheduling (e.g. "dark at sunset") — only the three options requested.
-- No per-page overrides.
-- No new dependencies (`next-themes` is already pulled in by sonner but we won't depend on it directly to keep this lightweight and aligned with the existing CSS variable system).
-
-## Files touched
-
-- `src/index.css` — refine `.dark` tokens
-- `src/lib/theme.ts` (new)
-- `src/hooks/useTheme.ts` (new)
-- `index.html` — pre-hydration script + dynamic theme-color
-- `src/main.tsx` — call `initTheme()` early
-- `src/pages/Profile.tsx` — Appearance section
-- Spot fixes in components/pages that use literal colors
-
-## Notes
-
-- No backend changes — preference is local to each device (matches typical OS-level theme behavior).
-- The PWA manifest `theme_color` stays as the light brand color; the runtime `<meta name="theme-color">` handles dynamic switching for the browser chrome.
+- `src/pages/Index.tsx` — move tabs, adjust paddings, update skeleton.
+- `src/index.css` — add `.glass-bar` utility class.
