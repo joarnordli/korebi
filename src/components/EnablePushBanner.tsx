@@ -7,9 +7,9 @@ import {
   enablePush,
   pushSupported,
   isIOSWithoutStandalone,
-  pushDismissed,
   markPushDismissed,
 } from "@/lib/push";
+
 
 const SESSION_HIDE_KEY = "okiro:push_banner_session_hidden";
 
@@ -22,13 +22,15 @@ export default function EnablePushBanner() {
     if (!user) return;
     if (!pushSupported()) return;
     if (isIOSWithoutStandalone()) return;
+    // Show only when permission is still pending ("default").
+    // "granted" → no need; "denied" → user must re-enable in OS settings.
     if (Notification.permission !== "default") return;
-    if (!pushDismissed()) return;
     try {
       if (sessionStorage.getItem(SESSION_HIDE_KEY) === "1") return;
     } catch { /* ignore */ }
     setVisible(true);
   }, [user]);
+
 
   const handleEnable = async () => {
     if (!user || busy) return;
