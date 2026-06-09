@@ -51,27 +51,52 @@ export default function Profile() {
   const [bcTitle, setBcTitle] = useState("Okiro");
   const [bcBody, setBcBody] = useState("");
   const [bcUrl, setBcUrl] = useState("/");
-  const [bcAudience, setBcAudience] = useState<"all_enabled" | "all_subscriptions" | "self">("all_enabled");
   const [bcRecipients, setBcRecipients] = useState<number | null>(null);
-  const [bcPreviewing, setBcPreviewing] = useState(false);
   const [bcConfirmOpen, setBcConfirmOpen] = useState(false);
   const [bcConfirmText, setBcConfirmText] = useState("");
   const [bcSending, setBcSending] = useState(false);
+  const [bcSendingSelf, setBcSendingSelf] = useState(false);
   const [bcResult, setBcResult] = useState<{ sent: number; failed: number; expired_cleaned: number } | null>(null);
 
-  const handleBcPreview = async () => {
-    setBcPreviewing(true);
+  const openBroadcastConfirm = async () => {
+    if (!bcTitle.trim() || !bcBody.trim()) {
+      toast.error("Title and body are required");
+      return;
+    }
     setBcRecipients(null);
+    setBcConfirmOpen(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-broadcast", {
-        body: { preview: true, audience: bcAudience },
+        body: { preview: true, audience: "all_subscriptions" },
       });
       if (error) throw error;
       setBcRecipients(data?.recipients ?? 0);
     } catch (err: any) {
       toast.error(err.message || "Could not preview audience");
+    }
+  };
+
+  const handleBcSendSelf = async () => {
+    if (!bcTitle.trim() || !bcBody.trim()) {
+      toast.error("Title and body are required");
+      return;
+    }
+    setBcSendingSelf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-broadcast", {
+        body: {
+          title: bcTitle.trim(),
+          body: bcBody.trim(),
+          url: bcUrl.trim() || "/",
+          audience: "self",
+        },
+      });
+      if (error) throw error;
+      toast.success(`Test sent to ${data?.sent ?? 0} of your device${data?.sent === 1 ? "" : "s"}.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test");
     } finally {
-      setBcPreviewing(false);
+      setBcSendingSelf(false);
     }
   };
 
@@ -84,7 +109,7 @@ export default function Profile() {
           title: bcTitle.trim(),
           body: bcBody.trim(),
           url: bcUrl.trim() || "/",
-          audience: bcAudience,
+          audience: "all_subscriptions",
         },
       });
       if (error) throw error;
@@ -342,48 +367,25 @@ export default function Profile() {
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">Audience</label>
-                <select
-                  value={bcAudience}
-                  onChange={(e) => {
-                    setBcAudience(e.target.value as any);
-                    setBcRecipients(null);
-                  }}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="all_enabled">All users with reminders ON</option>
-                  <option value="all_subscriptions">All push subscriptions</option>
-                  <option value="self">Just me (dry run)</option>
-                </select>
-              </div>
 
-              <div className="flex gap-2">
+
+
+              <div className="flex flex-col gap-2 pt-1">
                 <button
-                  onClick={handleBcPreview}
-                  disabled={bcPreviewing}
-                  className="flex-1 py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-                  {bcPreviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Count recipients"}
+                  onClick={handleBcSendSelf}
+                  disabled={bcSendingSelf}
+                  className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+                  {bcSendingSelf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {bcSendingSelf ? "Sending…" : "Send test to myself"}
                 </button>
                 <button
-                  onClick={() => {
-                    if (!bcTitle.trim() || !bcBody.trim()) {
-                      toast.error("Title and body are required");
-                      return;
-                    }
-                    setBcConfirmOpen(true);
-                  }}
-                  className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
+                  onClick={openBroadcastConfirm}
+                  className="w-full py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
                   <Send className="w-3.5 h-3.5" />
-                  Send broadcast
+                  Send to all push subscribers
                 </button>
               </div>
 
-              {bcRecipients !== null && (
-                <p className="font-body text-xs text-muted-foreground">
-                  This audience reaches <strong className="text-foreground">{bcRecipients}</strong> device{bcRecipients === 1 ? "" : "s"}.
-                </p>
-              )}
               {bcResult && (
                 <p className="font-body text-xs text-muted-foreground">
                   Last send: <strong className="text-foreground">{bcResult.sent} delivered</strong>, {bcResult.failed} failed, {bcResult.expired_cleaned} expired cleaned.
@@ -675,10 +677,7 @@ export default function Profile() {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-lg text-foreground">Send this broadcast?</AlertDialogTitle>
             <AlertDialogDescription className="font-body text-sm text-muted-foreground">
-              Audience: <strong className="text-foreground">
-                {bcAudience === "all_enabled" ? "All users with reminders ON" :
-                 bcAudience === "all_subscriptions" ? "All push subscriptions" : "Just me"}
-              </strong>
+              Audience: <strong className="text-foreground">All push subscribers</strong>
               {bcRecipients !== null && <> · {bcRecipients} device{bcRecipients === 1 ? "" : "s"}</>}
             </AlertDialogDescription>
           </AlertDialogHeader>

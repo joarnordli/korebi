@@ -119,9 +119,9 @@ Deno.serve(async (req) => {
     );
 
     let query = admin.from("push_subscriptions").select("*");
-    if (audience === "all_enabled") query = query.eq("reminder_enabled", true);
-    else if (audience === "self") query = query.eq("user_id", userId);
-    // "all_subscriptions" => no extra filter
+    if (audience === "self") query = query.eq("user_id", userId);
+    // "all_subscriptions" (and legacy "all_enabled") => all rows, no filter
+
 
     const { data: subs, error: subsError } = await query;
     if (subsError) throw subsError;
