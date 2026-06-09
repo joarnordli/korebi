@@ -1,96 +1,39 @@
-# Admin Dashboard — separate route with full insights
+# Switch from 7 NOK/week to 28 NOK/month
 
 ## Goal
-Pull every admin-only UI out of the Profile page and into a dedicated, admin-gated route at `/admin`. Add a richer set of business / health metrics useful for fundraising and stakeholder updates.
+- New checkouts use the monthly price `price_1TevL9JZind3K83svagyji0k` (28 NOK / month).
+- All copy that says "7 NOK/week" updates to "28 NOK/month".
+- Existing active weekly subscribers are migrated to the monthly price with Stripe handling proration.
 
-## Access control
-- Route `/admin` rendered only when `is_admin(auth.uid())` returns true (already exists as a DB function and as `isAdmin` state in Profile).
-- Non-admins hitting `/admin` → redirect to `/profile`.
-- A small "Admin dashboard" link appears in Profile **only** for admins (replacing the inline panels). Everyone else sees nothing.
+## 1. Update checkout (price ID)
+**`supabase/functions/create-checkout/index.ts`** — line 62: replace `price: "price_1T9OdhJZind3K83s4UfCsPtL"` with `price: "price_1TevL9JZind3K83svagyji0k"`.
 
-## What moves out of Profile.tsx
-Remove these three blocks (lines ~302–391):
-1. Admin · Broadcast panel
-2. Admin · Test push panel
-3. `<AdminPanel />` (push insights)
+## 2. Update UI copy (5 spots)
+| File | Change |
+|---|---|
+| `src/pages/Landing.tsx` | "Then 7 NOK/week" → "Then 28 NOK/month" |
+| `src/pages/Subscribe.tsx` | `7 NOK` / `/week` headline → `28 NOK` / `/month` |
+| `src/pages/Profile.tsx` (×3) | trial-end note, active-sub line, and "Subscribe — 7 NOK/week" button all change to monthly |
+| `src/pages/legal/Terms.tsx` | "7 NOK / week" → "28 NOK / month" |
 
-Also remove the now-unused admin imports/state from Profile (`Megaphone`, `Send`, `bcTitle/bcBody/bcUrl/bcResult`, `handleSendTest`, broadcast handlers, AdminPanel lazy import).
+No other code references the price.
 
-## New page: `src/pages/Admin.tsx`
-Tabbed layout using existing `@/components/ui/tabs`:
+## 3. Migrate existing weekly subscribers
+New admin-only edge function **`supabase/functions/migrate-subscriptions/index.ts`**:
+- Verifies caller via `is_admin` RPC (same pattern as `admin-metrics`).
+- Lists all `status: "active"` subscriptions in Stripe.
+- For each subscription whose first item is on the old weekly price (`price_1T9OdhJZind3K83s4UfCsPtL`), calls `stripe.subscriptions.update(sub.id, { items: [{ id: itemId, price: NEW_PRICE_ID }], proration_behavior: "create_prorations" })`.
+- Returns `{ migrated, skipped, failed, details }` so we can see what happened.
 
-```text
-┌──────────────────────────────────────────────┐
-│  Overview │ Users │ Push │ Revenue │ Tools   │
-└──────────────────────────────────────────────┘
-```
+Then add a button in the **Admin → Tools tab** (`src/pages/Admin.tsx`):
+- "Migrate all weekly subs to monthly" → dry-run preview first (`{ preview: true }` returns counts without mutating), then a confirm dialog requiring "MIGRATE", then real run.
+- Shows results inline after completion.
 
-### Tab 1 — Overview (KPI grid)
-Top-line numbers at a glance, each as a small stat card with delta vs previous period where possible:
-- Total users (all-time) + new in last 7 / 30 days
-- DAU / WAU / MAU (derived from `memories.created_at` distinct user_id per window)
-- Active subscriptions (count where `subscriptions.active = true`)
-- Trials in progress (profiles where `is_trialing` from check-subscription cache OR via Stripe; use `subscriptions` + a heuristic)
-- Trial → paid conversion rate (paid subs ÷ trial signups in window)
-- Churn rate (cancellations last 30d ÷ active subs at period start) — requires a small new view or Stripe call; v1 will compute from `subscriptions.active` deltas
-- Total memories captured + avg per active user
-- Storage used (sum from `memories` storage bucket; see "Technical" below)
-- Push subscribers (count of `push_subscriptions`)
+Stripe behaviour: customers stay on their current billing cycle until that cycle ends, then Stripe credits the unused weekly time and charges the new monthly amount on next renewal. No immediate charge unless the user wants `proration_behavior: "always_invoice"` (I'll default to `create_prorations`, which is the safer/standard choice).
 
-### Tab 2 — Users
-- Table: most recent 50 signups (`profiles.created_at`, display_name, memories count, subscription state, storage MB)
-- Sort/filter by: signup date, subscriber state, storage
-- Per-user storage column: bytes in `memories` bucket under `userId/` prefix, computed via an edge function (cached 10 min)
-- CSV export button (writes via `Blob` download)
-
-### Tab 3 — Push
-Existing `AdminPanel` content (open-rate by source, 14-day sparkline, recent broadcasts, reminder runs, engagement runs). No behavior change.
-
-### Tab 4 — Revenue
-- MRR estimate (sum of active subscription prices) — via new edge function `admin-stripe-metrics` calling Stripe
-- Active subscribers by plan
-- New paid subs / cancellations last 7 & 30 days
-- Lifetime revenue (sum of Stripe charges, last 90 days for cost reasons)
-- Trial → paid funnel
-
-### Tab 5 — Tools
-The action panels currently on Profile:
-- Broadcast composer (title / body / URL / "Send to all push subscribers")
-- Test push (send to my devices)
-- (Future placeholder) Resend last reminder, purge expired subscriptions
-
-## Routing
-- Add `<Route path="/admin" element={<Admin />} />` in `src/App.tsx`.
-- `Admin.tsx` wraps content in an `AdminGuard` component that checks `useAuth().user` then calls `supabase.rpc('is_admin', { _user_id: user.id })`; while loading shows a skeleton; on false `navigate('/profile', { replace: true })`.
-
-## Technical details
-
-### New edge function: `admin-metrics`
-Single function returning an aggregated JSON payload so the dashboard makes one round-trip:
-- Verifies caller via `is_admin` RPC (rejects 403 otherwise).
-- Returns: user counts, DAU/WAU/MAU, memories totals, push sub count, per-user storage list (paginated), subscription state counts.
-- Uses service role; never exposes per-user PII beyond display_name + email prefix.
-
-### New edge function: `admin-stripe-metrics`
-- Admin-gated. Lists active subscriptions from Stripe, computes MRR, churn, new/cancelled counts.
-- Cached client-side for 5 min via React Query-style state (simple `useState` + timestamp; project doesn't use react-query for these).
-
-### Storage usage
-- `supabase.storage.from('memories').list(userId, { limit: 1000 })` per user inside the `admin-metrics` function, summing `metadata.size`. For users with >1000 objects, paginate. Skip users with no memories.
-
-### No schema changes required
-All metrics can be derived from existing tables (`profiles`, `memories`, `subscriptions`, `push_subscriptions`, `push_send_events`, `broadcast_log`, `reminder_run_log`, `engagement_run_log`) plus Stripe. No migrations needed for v1.
-
-### Files
-- **New:** `src/pages/Admin.tsx`, `src/components/admin/AdminGuard.tsx`, `src/components/admin/OverviewTab.tsx`, `UsersTab.tsx`, `PushTab.tsx` (re-exports existing `AdminPanel`), `RevenueTab.tsx`, `ToolsTab.tsx`, `StatCard.tsx`
-- **New edge functions:** `supabase/functions/admin-metrics/index.ts`, `supabase/functions/admin-stripe-metrics/index.ts`
-- **Edited:** `src/pages/Profile.tsx` (strip admin sections, add single "Admin dashboard" link for admins), `src/App.tsx` (route)
-
-## Out of scope (v1)
-- Cohort retention curves
-- Per-country breakdowns
-- Real-time websocket updates
-- Editing/refunding subscriptions from the dashboard (use Stripe portal)
+## Out of scope
+- Refunding currently-paid weekly periods (Stripe's proration credit covers this).
+- Email notifications to users about the price change — say the word if you want one.
 
 ## Open question
-Any specific metric you want front-and-centre on the Overview tab for investor screenshots (e.g. WAU, MRR, or memories captured)? I can make that one the hero card.
+After migration, do you want to **archive** the old weekly price in Stripe so nothing can accidentally check out at it? If yes, I'll add that as the last step in the migration function.

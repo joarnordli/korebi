@@ -133,7 +133,7 @@ export default function Landing() {
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-primary" />
                 <span className="font-body text-sm text-foreground font-medium">
-                  Then 7 NOK/week
+                  Then 28 NOK/month
                 </span>
               </div>
             </div>

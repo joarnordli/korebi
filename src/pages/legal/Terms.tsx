@@ -38,7 +38,7 @@ export default function Terms() {
       <h2>5. Subscription, billing and refunds</h2>
       <ul>
         <li>New accounts get a <strong>7-day free trial</strong>. No charge until the trial ends.</li>
-        <li>After the trial, Okiro is <strong>7 NOK / week</strong>, billed automatically until you cancel.</li>
+        <li>After the trial, Okiro is <strong>28 NOK / month</strong>, billed automatically until you cancel.</li>
         <li>You can cancel anytime from Profile → Manage subscription. Cancellation stops future charges; the current period is not refunded.</li>
         <li>Refunds may be granted at our discretion for billing errors. EEA consumers retain statutory withdrawal rights where applicable.</li>
       </ul>

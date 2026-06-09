@@ -281,7 +281,7 @@ export default function Profile() {
                 className="h-full bg-primary rounded-full" />
               </div>
               <p className="font-body text-xs text-muted-foreground mt-2">
-                After your trial, it's 7 NOK/week to continue.
+                After your trial, it's 28 NOK/month to continue.
               </p>
             </div> :
           isPaidSubscriber ?
@@ -291,7 +291,7 @@ export default function Profile() {
                 <span className="font-body text-sm text-foreground font-medium">Active subscription</span>
               </div>
               <p className="font-body text-xs text-muted-foreground">
-                7 NOK/week · {subscriptionEnd ?
+                28 NOK/month · {subscriptionEnd ?
               `Renews ${new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` :
               ""}
               </p>
@@ -314,7 +314,7 @@ export default function Profile() {
                 {managingSubscription ? <Loader2 className="w-4 h-4 animate-spin" /> :
               <>
                     <Crown className="w-4 h-4" />
-                    Subscribe — 7 NOK/week
+                    Subscribe — 28 NOK/month
                   </>
               }
               </button>

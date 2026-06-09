@@ -165,6 +165,57 @@ export default function Admin() {
     expired_cleaned: number;
   } | null>(null);
 
+  // Migration state
+  const [migConfirmOpen, setMigConfirmOpen] = useState(false);
+  const [migConfirmText, setMigConfirmText] = useState("");
+  const [migCandidates, setMigCandidates] = useState<number | null>(null);
+  const [migRunning, setMigRunning] = useState(false);
+  const [migResult, setMigResult] = useState<{
+    candidates: number;
+    migrated: number;
+    failed: number;
+  } | null>(null);
+
+  const openMigrateConfirm = async () => {
+    setMigCandidates(null);
+    setMigConfirmOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "migrate-subscriptions",
+        { body: { preview: true } },
+      );
+      if (error) throw error;
+      setMigCandidates(data?.candidates ?? 0);
+    } catch (e: any) {
+      toast.error(e.message || "Could not preview migration");
+    }
+  };
+
+  const handleMigrate = async () => {
+    if (migConfirmText !== "MIGRATE") return;
+    setMigRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "migrate-subscriptions",
+      );
+      if (error) throw error;
+      setMigResult({
+        candidates: data?.candidates ?? 0,
+        migrated: data?.migrated ?? 0,
+        failed: data?.failed ?? 0,
+      });
+      toast.success(
+        `Migrated ${data?.migrated ?? 0} subscription${data?.migrated === 1 ? "" : "s"}.`,
+      );
+      setMigConfirmOpen(false);
+      setMigConfirmText("");
+    } catch (e: any) {
+      toast.error(e.message || "Migration failed");
+    } finally {
+      setMigRunning(false);
+    }
+  };
+
   const handleSendTest = async () => {
     if (sendingTest) return;
     setSendingTest(true);
@@ -695,6 +746,37 @@ export default function Admin() {
                 {sendingTest ? "Sending…" : "Send test to my devices"}
               </button>
             </div>
+
+            {/* Migrate subs */}
+            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="w-4 h-4 text-primary" />
+                <h2 className="font-display text-sm font-bold text-foreground">
+                  Migrate weekly → monthly
+                </h2>
+              </div>
+              <p className="font-body text-xs text-muted-foreground mb-3">
+                Switches all active weekly subscribers to the new 28 NOK/month
+                plan. Stripe applies prorated credits automatically; no immediate
+                charge.
+              </p>
+              <button
+                onClick={openMigrateConfirm}
+                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                Preview & migrate
+              </button>
+              {migResult && (
+                <p className="font-body text-xs text-muted-foreground mt-2">
+                  Last run:{" "}
+                  <strong className="text-foreground">
+                    {migResult.migrated} migrated
+                  </strong>
+                  , {migResult.failed} failed (of {migResult.candidates}).
+                </p>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -764,6 +846,74 @@ export default function Admin() {
                 <Send className="w-4 h-4" />
               )}
               {bcSending ? "Sending…" : "Send now"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Migration confirmation */}
+      <AlertDialog
+        open={migConfirmOpen}
+        onOpenChange={(open) => {
+          if (!migRunning) {
+            setMigConfirmOpen(open);
+            if (!open) setMigConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg text-foreground">
+              Migrate weekly subscribers?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
+              {migCandidates === null ? (
+                <>Counting active weekly subscriptions…</>
+              ) : (
+                <>
+                  <strong className="text-foreground">{migCandidates}</strong>{" "}
+                  active weekly subscription{migCandidates === 1 ? "" : "s"} will
+                  be switched to 28 NOK/month with prorated credits. This cannot
+                  be undone in one click.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-1">
+            <label className="font-body text-xs text-muted-foreground block mb-1.5">
+              Type <strong className="text-foreground">MIGRATE</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={migConfirmText}
+              onChange={(e) => setMigConfirmText(e.target.value)}
+              placeholder="MIGRATE"
+              disabled={migRunning}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+            />
+          </div>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel
+              disabled={migRunning}
+              className="flex-1 rounded-xl font-body text-sm"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <button
+              onClick={handleMigrate}
+              disabled={
+                migConfirmText !== "MIGRATE" ||
+                migRunning ||
+                migCandidates === 0
+              }
+              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
+            >
+              {migRunning ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CreditCard className="w-4 h-4" />
+              )}
+              {migRunning ? "Migrating…" : "Migrate now"}
             </button>
           </AlertDialogFooter>
         </AlertDialogContent>
