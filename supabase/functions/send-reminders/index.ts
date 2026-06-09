@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { buildPushHTTPRequest } from "npm:@pushforge/builder@2.0.1";
+import { requireCronOrServiceRole } from "../_shared/auth-cron.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,6 +88,14 @@ const reminders: { title: string; body: string }[] = [
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const unauthorized = await requireCronOrServiceRole(req);
+  if (unauthorized) {
+    return new Response(unauthorized.body, {
+      status: unauthorized.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const startedAt = Date.now();
