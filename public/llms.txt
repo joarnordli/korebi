@@ -2,7 +2,7 @@
 
 > A minimalist photo journal app — capture one photo and one thought a day to build a beautiful daily diary of the moments that matter.
 
-Okiro is a daily photo journaling web app (installable as a PWA). Each day, users capture a single photo, pair it with a short reflection, and watch their feed grow into a scrollable timeline of their life. Free for 7 days, then 7 NOK/week.
+Okiro is a daily photo journaling web app (installable as a PWA). Each day, users capture a single photo, pair it with a short reflection, and watch their feed grow into a scrollable timeline of their life. Free for 7 days, then 28 NOK/month.
 
 ## Pages
 
