@@ -81,9 +81,19 @@ export default function Privacy() {
         app or by email at least 14 days before they take effect.
       </p>
 
-      <h2>10. Contact</h2>
+      <h2>10. Contact &amp; abuse reports</h2>
       <p>
-        Questions? Email <a href="mailto:hello@okiro.online">hello@okiro.online</a>.
+        Questions or privacy requests: <a href="mailto:hello@okiro.online">hello@okiro.online</a>.
+      </p>
+      <p>
+        DMCA / abuse / illegal-content notices:{" "}
+        <a href="mailto:hello@okiro.online">hello@okiro.online</a>. You can also report a specific
+        memory from inside the app (⋯ menu → Report or remove).
+      </p>
+
+      <h2>11. Operator</h2>
+      <p>
+        Okiro is operated by Nordli Media, Carl Berners Plass 2, Oslo, Norway.
       </p>
     </LegalLayout>
   );
