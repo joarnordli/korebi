@@ -206,13 +206,37 @@ export default function Auth() {
           </div>
 
           {mode === "signup" && (
+            <>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="password"
+                  placeholder="Confirm password"
+                  aria-label="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              {passwordMismatch && (
+                <p className="text-xs font-body text-destructive pl-1">Passwords do not match</p>
+              )}
+              {passwordsMatch && password.length >= 6 && (
+                <p className="text-xs font-body text-green-600 pl-1">Passwords match</p>
+              )}
+            </>
+          )}
+
+          {mode === "signup" && (
             <ConsentGate value={consent} onChange={setConsent} />
           )}
 
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"
-            disabled={loading || (mode === "signup" && !(consent.age16 && consent.tos))}
+            disabled={loading || (mode === "signup" && (!signupReady || !(consent.age16 && consent.tos)))}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-body font-semibold text-sm flex items-center justify-center gap-2 shadow-card disabled:opacity-60"
           >
             {loading ? "Please wait…" : (
