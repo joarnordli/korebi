@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useMemories } from "@/hooks/useMemories";
 import { useRelive } from "@/hooks/useRelive";
+import EnablePushBanner from "@/components/EnablePushBanner";
 
 type Tab = "today" | "memories" | "relive";
 const TAB_ORDER: Tab[] = ["today", "memories", "relive"];
