@@ -13,6 +13,7 @@ import {
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { EmailFooter } from '../transactional-email-templates/footer.tsx'
 
 interface InviteEmailProps {
   siteName: string
@@ -20,11 +21,7 @@ interface InviteEmailProps {
   confirmationUrl: string
 }
 
-export const InviteEmail = ({
-  siteName,
-  siteUrl,
-  confirmationUrl,
-}: InviteEmailProps) => (
+export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>You've been invited to join Okiro</Preview>
@@ -35,12 +32,9 @@ export const InviteEmail = ({
         <Text style={text}>
           Someone invited you to join Okiro — a daily reflection journal. Click below to accept and create your account.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
-          If you weren't expecting this, you can safely ignore this email.
-        </Text>
+        <Button style={button} href={confirmationUrl}>Accept Invitation</Button>
+        <Text style={footer}>If you weren't expecting this, you can safely ignore this email.</Text>
+        <EmailFooter />
       </Container>
     </Body>
   </Html>
@@ -51,26 +45,7 @@ export default InviteEmail
 const main = { backgroundColor: '#ffffff', fontFamily: "'Source Sans 3', 'Segoe UI', Arial, sans-serif" }
 const container = { padding: '32px 28px' }
 const logo = { marginBottom: '24px' }
-const h1 = {
-  fontSize: '24px',
-  fontWeight: 'bold' as const,
-  fontFamily: "'Playfair Display', Georgia, serif",
-  color: 'hsl(25, 20%, 16%)',
-  margin: '0 0 8px',
-}
-const text = {
-  fontSize: '15px',
-  color: 'hsl(25, 10%, 50%)',
-  lineHeight: '1.6',
-  margin: '0 0 20px',
-}
-const button = {
-  backgroundColor: 'hsl(30, 65%, 50%)',
-  color: 'hsl(36, 33%, 97%)',
-  fontSize: '15px',
-  fontWeight: '600' as const,
-  borderRadius: '0.75rem',
-  padding: '12px 24px',
-  textDecoration: 'none',
-}
+const h1 = { fontSize: '24px', fontWeight: 'bold' as const, fontFamily: "'Playfair Display', Georgia, serif", color: 'hsl(25, 20%, 16%)', margin: '0 0 8px' }
+const text = { fontSize: '15px', color: 'hsl(25, 10%, 50%)', lineHeight: '1.6', margin: '0 0 20px' }
+const button = { backgroundColor: 'hsl(30, 65%, 50%)', color: 'hsl(36, 33%, 97%)', fontSize: '15px', fontWeight: '600' as const, borderRadius: '0.75rem', padding: '12px 24px', textDecoration: 'none' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
