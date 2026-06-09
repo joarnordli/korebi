@@ -527,78 +527,27 @@ export default function Profile() {
           </p>
         </motion.div>
 
-        {/* Daily Reminders */}
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="bg-card rounded-2xl shadow-card p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        {/* Admin: Test notification */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-3">
               <Bell className="w-4 h-4 text-primary" />
-              <div>
-                <h2 className="font-display text-sm font-bold text-foreground">Daily reminders</h2>
-                <p className="font-body text-xs text-muted-foreground mt-0.5">
-                  Get a daily reminder to capture your moment
-                </p>
-              </div>
+              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
             </div>
-            {remindersLoading ?
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> :
-            <Switch
-              checked={remindersEnabled}
-              onCheckedChange={handleToggleReminders}
-              disabled={togglingReminders} />
-            }
-          </div>
-          {remindersEnabled && !remindersLoading && (
-            <>
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="font-body text-xs text-muted-foreground mb-2">
-                  Preferred time window <span className="text-muted-foreground/70">(your local time)</span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={windowStart}
-                    onChange={(e) => handleSaveWindow(parseInt(e.target.value, 10), windowEnd)}
-                    disabled={savingWindow}
-                    className="flex-1 px-2 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-                  >
-                    {Array.from({ length: 24 }, (_, h) => (
-                      <option key={h} value={h} disabled={h > windowEnd}>
-                        {h.toString().padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                  <span className="font-body text-xs text-muted-foreground">to</span>
-                  <select
-                    value={windowEnd}
-                    onChange={(e) => handleSaveWindow(windowStart, parseInt(e.target.value, 10))}
-                    disabled={savingWindow}
-                    className="flex-1 px-2 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-                  >
-                    {Array.from({ length: 24 }, (_, h) => (
-                      <option key={h} value={h} disabled={h < windowStart}>
-                        {h.toString().padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="font-body text-xs text-muted-foreground mt-2">
-                  We'll skip the reminder on days you've already captured a memory.
-                </p>
-              </div>
-              <button
-                onClick={handleSendTest}
-                disabled={sendingTest}
-                className="mt-3 w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-                {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                {sendingTest ? "Sending…" : "Send test notification"}
-              </button>
-            </>
-          )}
-        </motion.div>
+            <button
+              onClick={handleSendTest}
+              disabled={sendingTest}
+              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+              {sendingTest ? "Sending…" : "Send test notification to my devices"}
+            </button>
+          </motion.div>
+        )}
+
 
         {/* Download Memories */}
         <motion.div
