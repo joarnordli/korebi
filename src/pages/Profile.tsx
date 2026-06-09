@@ -677,10 +677,7 @@ export default function Profile() {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-lg text-foreground">Send this broadcast?</AlertDialogTitle>
             <AlertDialogDescription className="font-body text-sm text-muted-foreground">
-              Audience: <strong className="text-foreground">
-                {bcAudience === "all_enabled" ? "All users with reminders ON" :
-                 bcAudience === "all_subscriptions" ? "All push subscriptions" : "Just me"}
-              </strong>
+              Audience: <strong className="text-foreground">All push subscribers</strong>
               {bcRecipients !== null && <> · {bcRecipients} device{bcRecipients === 1 ? "" : "s"}</>}
             </AlertDialogDescription>
           </AlertDialogHeader>
