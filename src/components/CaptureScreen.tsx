@@ -6,12 +6,14 @@ import { compressImage } from "@/lib/image-compress";
 import { extractGpsFromFile } from "@/lib/exif";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { enablePush } from "@/lib/push";
 
 interface CaptureScreenProps {
   onSaved: () => void;
+  isFirstMemory?: boolean;
 }
 
-export default function CaptureScreen({ onSaved }: CaptureScreenProps) {
+export default function CaptureScreen({ onSaved, isFirstMemory = false }: CaptureScreenProps) {
   const { user } = useAuth();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
