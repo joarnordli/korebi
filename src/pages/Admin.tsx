@@ -12,7 +12,9 @@ import {
   Megaphone,
   Send,
   Download,
+  Mail,
 } from "lucide-react";
+
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -176,6 +178,18 @@ export default function Admin() {
     failed: number;
   } | null>(null);
 
+  // Billing-change notification state
+  const [bnConfirmOpen, setBnConfirmOpen] = useState(false);
+  const [bnConfirmText, setBnConfirmText] = useState("");
+  const [bnRecipients, setBnRecipients] = useState<number | null>(null);
+  const [bnSample, setBnSample] = useState<string[]>([]);
+  const [bnRunning, setBnRunning] = useState(false);
+  const [bnResult, setBnResult] = useState<{
+    attempted: number;
+    enqueued: number;
+    failed: number;
+  } | null>(null);
+
   const openMigrateConfirm = async () => {
     setMigCandidates(null);
     setMigConfirmOpen(true);
@@ -215,6 +229,50 @@ export default function Admin() {
       setMigRunning(false);
     }
   };
+
+  const openBillingNoticeConfirm = async () => {
+    setBnRecipients(null);
+    setBnSample([]);
+    setBnConfirmOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "notify-billing-change",
+        { body: { dryRun: true } },
+      );
+      if (error) throw error;
+      setBnRecipients(data?.recipientCount ?? 0);
+      setBnSample(data?.sampleEmails ?? []);
+    } catch (e: any) {
+      toast.error(e.message || "Could not preview recipients");
+    }
+  };
+
+  const handleBillingNoticeSend = async () => {
+    if (bnConfirmText !== "SEND") return;
+    setBnRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "notify-billing-change",
+        { body: { dryRun: false } },
+      );
+      if (error) throw error;
+      setBnResult({
+        attempted: data?.attempted ?? 0,
+        enqueued: data?.enqueued ?? 0,
+        failed: data?.failed ?? 0,
+      });
+      toast.success(
+        `Queued ${data?.enqueued ?? 0} email${data?.enqueued === 1 ? "" : "s"}.`,
+      );
+      setBnConfirmOpen(false);
+      setBnConfirmText("");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send notice");
+    } finally {
+      setBnRunning(false);
+    }
+  };
+
 
   const handleSendTest = async () => {
     if (sendingTest) return;
