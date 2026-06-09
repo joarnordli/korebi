@@ -96,38 +96,16 @@ serve(async (req) => {
     }
 
     // ---- Storage per user via storage.objects ----
-    const { data: storageRows } = await supabase
-      .rpc("admin_storage_usage" as never)
-      .select?.() ?? { data: null };
-    // Fallback: direct SQL if RPC not present
-    let perUserStorage: { user_id: string; bytes: number; objects: number }[] =
-      [];
+    const perUserStorage: { user_id: string; bytes: number; objects: number }[] = [];
     let totalBytes = 0;
-    if (storageRows && Array.isArray(storageRows)) {
-      perUserStorage = storageRows as typeof perUserStorage;
-      totalBytes = perUserStorage.reduce((s, r) => s + Number(r.bytes ?? 0), 0);
-    } else {
-      // Use raw SQL via pg
-      const { data: rawRows } = await supabase
-        .from("storage_usage_view" as never)
-        .select("*");
-      if (rawRows) {
-        perUserStorage = rawRows as typeof perUserStorage;
-        totalBytes = perUserStorage.reduce(
-          (s, r) => s + Number(r.bytes ?? 0),
-          0,
-        );
-      }
-    }
-
-    // Last-resort: paginate storage.objects directly
-    if (perUserStorage.length === 0) {
+    {
       const storageMap = new Map<string, { bytes: number; objects: number }>();
       let from = 0;
       const pageSize = 1000;
+      // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { data: objs, error } = await supabase
-          .schema("storage" as never)
+        const { data: objs, error } = await (supabase as any)
+          .schema("storage")
           .from("objects")
           .select("name, metadata")
           .eq("bucket_id", "memories")
@@ -144,15 +122,13 @@ serve(async (req) => {
         }
         if (objs.length < pageSize) break;
         from += pageSize;
-        if (from > 50_000) break; // safety
+        if (from > 50_000) break;
       }
-      perUserStorage = Array.from(storageMap.entries()).map(([uid, v]) => ({
-        user_id: uid,
-        bytes: v.bytes,
-        objects: v.objects,
-      }));
+      for (const [uid, v] of storageMap)
+        perUserStorage.push({ user_id: uid, bytes: v.bytes, objects: v.objects });
       totalBytes = perUserStorage.reduce((s, r) => s + r.bytes, 0);
     }
+
 
     // ---- Users table (recent 200) ----
     const { data: recentProfiles } = await supabase
