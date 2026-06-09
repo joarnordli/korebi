@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useMemories } from "@/hooks/useMemories";
 import { useRelive } from "@/hooks/useRelive";
+import EnablePushBanner from "@/components/EnablePushBanner";
 
 type Tab = "today" | "memories" | "relive";
 const TAB_ORDER: Tab[] = ["today", "memories", "relive"];
@@ -200,22 +201,25 @@ export default function Index() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}>
               {todayCaptured ?
-                <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                  <img src={okiroLogo} alt="Okiro" className="w-10 h-10 mb-4" />
-                  <p className="font-display text-lg text-foreground">
-                    Today's moment captured
-                  </p>
-                  <p className="font-body text-sm text-muted-foreground mt-1">
-                    Come back tomorrow for a new memory
-                  </p>
-                  {streak > 0 && (
-                    <div className="mt-4 flex items-center gap-1.5">
-                      <span className="text-2xl font-display font-bold text-accent">{streak}</span>
-                      <span className="font-body text-sm text-muted-foreground">day streak 🔥</span>
-                    </div>
-                  )}
-                </div> :
-                <CaptureScreen onSaved={handleSaved} />
+                <>
+                  <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+                    <img src={okiroLogo} alt="Okiro" className="w-10 h-10 mb-4" />
+                    <p className="font-display text-lg text-foreground">
+                      Today's moment captured
+                    </p>
+                    <p className="font-body text-sm text-muted-foreground mt-1">
+                      Come back tomorrow for a new memory
+                    </p>
+                    {streak > 0 && (
+                      <div className="mt-4 flex items-center gap-1.5">
+                        <span className="text-2xl font-display font-bold text-accent">{streak}</span>
+                        <span className="font-body text-sm text-muted-foreground">day streak 🔥</span>
+                      </div>
+                    )}
+                  </div>
+                  <EnablePushBanner />
+                </> :
+                <CaptureScreen onSaved={handleSaved} isFirstMemory={memories.length === 0} />
               }
             </motion.div>
           )}

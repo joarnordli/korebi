@@ -1,11 +1,10 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send, Sun, Moon, Smartphone } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemePreference } from "@/lib/theme";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,29 +25,13 @@ import okiroLogo from "@/assets/okiro-logo.png";
 const AdminPanel = lazy(() => import("@/components/AdminPanel"));
 const MemoryMap = lazy(() => import("@/components/MemoryMap"));
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
-function arrayBuffersEqual(a: ArrayBuffer | null, b: Uint8Array): boolean {
-  if (!a) return false;
-  const av = new Uint8Array(a);
-  if (av.length !== b.length) return false;
-  for (let i = 0; i < av.length; i++) if (av[i] !== b[i]) return false;
-  return true;
-}
-
 interface MemoryLocation {
   date: string;
   note: string | null;
   latitude: number;
   longitude: number;
 }
+
 
 export default function Profile() {
   const { user, signOut, subscribed, isTrialing, trialDaysLeft, subscriptionEnd, checkSubscription, subscriptionLoading } = useAuth();
@@ -60,13 +43,7 @@ export default function Profile() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [remindersEnabled, setRemindersEnabled] = useState(false);
-  const [remindersLoading, setRemindersLoading] = useState(true);
-  const [togglingReminders, setTogglingReminders] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
-  const [windowStart, setWindowStart] = useState(10);
-  const [windowEnd, setWindowEnd] = useState(21);
-  const [savingWindow, setSavingWindow] = useState(false);
 
   // ===== Admin broadcast =====
   const ADMIN_USER_IDS = new Set<string>(["123f18ad-9a45-4dcb-9527-61cb2be423d0"]);
@@ -129,130 +106,6 @@ export default function Profile() {
 
   const { streak, locations } = useMemories();
 
-  // Check current reminder status
-  useEffect(() => {
-    if (!user) return;
-    const checkReminders = async () => {
-      const { data } = await supabase.
-      from("push_subscriptions").
-      select("id, reminder_enabled, reminder_window_start, reminder_window_end").
-      eq("user_id", user.id).
-      limit(1);
-      const row = data && data.length > 0 ? data[0] : null;
-      setRemindersEnabled(!!row?.reminder_enabled);
-      if (row) {
-        setWindowStart(row.reminder_window_start ?? 10);
-        setWindowEnd(row.reminder_window_end ?? 21);
-      }
-      setRemindersLoading(false);
-    };
-    checkReminders();
-  }, [user]);
-
-  const handleToggleReminders = async (enabled: boolean) => {
-    if (togglingReminders) return;
-    setTogglingReminders(true);
-
-    try {
-      if (enabled) {
-        if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-          toast.error("Push notifications are not supported in this browser.");
-          setTogglingReminders(false);
-          return;
-        }
-
-        // iOS Safari requires the app be installed to the Home Screen
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-        const isStandalone =
-          (window.navigator as any).standalone === true ||
-          window.matchMedia("(display-mode: standalone)").matches;
-        if (isIOS && !isStandalone) {
-          toast.error("On iPhone, add Okiro to your Home Screen first, then open it from there to enable reminders.");
-          setTogglingReminders(false);
-          return;
-        }
-
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          toast.error("Notification permission denied. Please enable it in your browser settings.");
-          setTogglingReminders(false);
-          return;
-        }
-
-        // Race the SW ready against a timeout so a failed SW registration doesn't hang us forever
-        const registration = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<ServiceWorkerRegistration>((_, reject) =>
-            setTimeout(() => reject(new Error("Service worker not ready (registration may have failed)")), 5000)
-          ),
-        ]);
-
-        // Always use the backend's current VAPID public key so client and server stay in sync
-        const { data: keyData, error: keyError } = await supabase.functions.invoke("get-vapid-key");
-        if (keyError || !keyData?.publicKey) {
-          throw new Error("Could not fetch push key from server");
-        }
-        const vapidKey = keyData.publicKey as string;
-        const vapidKeyBytes = urlBase64ToUint8Array(vapidKey);
-
-        // If the device already has a subscription bound to a different key, drop it first
-        const existing = await registration.pushManager.getSubscription();
-        if (existing) {
-          const existingKey = existing.options?.applicationServerKey ?? null;
-          if (!arrayBuffersEqual(existingKey, vapidKeyBytes)) {
-            try { await existing.unsubscribe(); } catch { /* ignore */ }
-            await supabase.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
-          }
-        }
-
-        const subscription =
-          (await registration.pushManager.getSubscription()) ??
-          (await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: vapidKeyBytes,
-          }));
-
-        const subJson = subscription.toJSON();
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-        const { error: upsertError } = await supabase.from("push_subscriptions").upsert(
-          {
-            user_id: user!.id,
-            endpoint: subJson.endpoint!,
-            p256dh: subJson.keys!.p256dh!,
-            auth: subJson.keys!.auth!,
-            timezone,
-            reminder_enabled: true
-          },
-          { onConflict: "user_id,endpoint" }
-        );
-        if (upsertError) throw upsertError;
-
-        setRemindersEnabled(true);
-        toast.success("Daily reminders enabled! You'll get a nudge between 10 AM and 10 PM.");
-      } else {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
-          if (subscription) await subscription.unsubscribe();
-        } catch {
-          // Continue even if unsubscribe fails
-        }
-        await supabase.
-        from("push_subscriptions").
-        delete().
-        eq("user_id", user!.id);
-
-        setRemindersEnabled(false);
-        toast.success("Daily reminders disabled.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update reminder settings");
-    } finally {
-      setTogglingReminders(false);
-    }
-  };
-
   const handleSendTest = async () => {
     if (sendingTest) return;
     setSendingTest(true);
@@ -263,7 +116,7 @@ export default function Profile() {
         toast.success(`Test notification sent to ${data.sent} device${data.sent === 1 ? "" : "s"}. Check your phone!`);
       } else {
         const reason = data?.results?.[0]?.reason || "Unknown error";
-        toast.error(`Couldn't send test (${reason}). Try toggling reminders off and on.`);
+        toast.error(`Couldn't send test (${reason}).`);
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to send test notification");
@@ -272,30 +125,6 @@ export default function Profile() {
     }
   };
 
-  const handleSaveWindow = async (newStart: number, newEnd: number) => {
-    if (!user || savingWindow) return;
-    if (newStart > newEnd) {
-      toast.error("Start time must be before end time.");
-      return;
-    }
-    setSavingWindow(true);
-    const prevStart = windowStart, prevEnd = windowEnd;
-    setWindowStart(newStart);
-    setWindowEnd(newEnd);
-    try {
-      const { error } = await supabase
-        .from("push_subscriptions")
-        .update({ reminder_window_start: newStart, reminder_window_end: newEnd })
-        .eq("user_id", user.id);
-      if (error) throw error;
-    } catch (err: any) {
-      setWindowStart(prevStart);
-      setWindowEnd(prevEnd);
-      toast.error(err.message || "Failed to save reminder window");
-    } finally {
-      setSavingWindow(false);
-    }
-  };
 
   const handleManageSubscription = async () => {
     setManagingSubscription(true);
@@ -681,78 +510,27 @@ export default function Profile() {
           </p>
         </motion.div>
 
-        {/* Daily Reminders */}
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="bg-card rounded-2xl shadow-card p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        {/* Admin: Test notification */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-3">
               <Bell className="w-4 h-4 text-primary" />
-              <div>
-                <h2 className="font-display text-sm font-bold text-foreground">Daily reminders</h2>
-                <p className="font-body text-xs text-muted-foreground mt-0.5">
-                  Get a daily reminder to capture your moment
-                </p>
-              </div>
+              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
             </div>
-            {remindersLoading ?
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> :
-            <Switch
-              checked={remindersEnabled}
-              onCheckedChange={handleToggleReminders}
-              disabled={togglingReminders} />
-            }
-          </div>
-          {remindersEnabled && !remindersLoading && (
-            <>
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="font-body text-xs text-muted-foreground mb-2">
-                  Preferred time window <span className="text-muted-foreground/70">(your local time)</span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={windowStart}
-                    onChange={(e) => handleSaveWindow(parseInt(e.target.value, 10), windowEnd)}
-                    disabled={savingWindow}
-                    className="flex-1 px-2 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-                  >
-                    {Array.from({ length: 24 }, (_, h) => (
-                      <option key={h} value={h} disabled={h > windowEnd}>
-                        {h.toString().padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                  <span className="font-body text-xs text-muted-foreground">to</span>
-                  <select
-                    value={windowEnd}
-                    onChange={(e) => handleSaveWindow(windowStart, parseInt(e.target.value, 10))}
-                    disabled={savingWindow}
-                    className="flex-1 px-2 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-                  >
-                    {Array.from({ length: 24 }, (_, h) => (
-                      <option key={h} value={h} disabled={h < windowStart}>
-                        {h.toString().padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="font-body text-xs text-muted-foreground mt-2">
-                  We'll skip the reminder on days you've already captured a memory.
-                </p>
-              </div>
-              <button
-                onClick={handleSendTest}
-                disabled={sendingTest}
-                className="mt-3 w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-                {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                {sendingTest ? "Sending…" : "Send test notification"}
-              </button>
-            </>
-          )}
-        </motion.div>
+            <button
+              onClick={handleSendTest}
+              disabled={sendingTest}
+              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+              {sendingTest ? "Sending…" : "Send test notification to my devices"}
+            </button>
+          </motion.div>
+        )}
+
 
         {/* Download Memories */}
         <motion.div
