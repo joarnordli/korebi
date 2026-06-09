@@ -22,7 +22,6 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const hasMounted = useRef(false);
 
@@ -200,13 +199,6 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => { setMenuOpen(false); setReportOpen(true); }}
-                    aria-label="Report or remove memory"
-                    className="glass-pill w-11 h-11 rounded-full flex items-center justify-center text-foreground transition-transform active:scale-95"
-                  >
-                    <Flag className="w-4 h-4" />
-                  </button>
                 </div>
               </PopoverContent>
             </Popover>
@@ -249,12 +241,6 @@ export default function MemoryCard({ memory, index, onUpdated }: MemoryCardProps
           )
         )}
       </div>
-      <ReportMemoryDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        memoryId={memory.id}
-        onDeleted={onUpdated}
-      />
     </motion.div>
   );
 }

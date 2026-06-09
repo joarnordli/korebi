@@ -87,8 +87,7 @@ export default function Privacy() {
       </p>
       <p>
         DMCA / abuse / illegal-content notices:{" "}
-        <a href="mailto:hello@okiro.online">hello@okiro.online</a>. You can also report a specific
-        memory from inside the app (⋯ menu → Report or remove).
+        <a href="mailto:hello@okiro.online">hello@okiro.online</a>.
       </p>
 
       <h2>11. Operator</h2>

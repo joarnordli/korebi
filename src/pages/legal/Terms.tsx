@@ -96,10 +96,6 @@ export default function Terms() {
         <br />
         <a href="mailto:hello@okiro.online">hello@okiro.online</a>
       </p>
-      <p>
-        You can also report individual memories directly from the app: open the memory, tap the
-        ⋯ menu, then "Report or remove."
-      </p>
 
       <h2>13. Operator</h2>
       <p>
