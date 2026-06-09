@@ -1,11 +1,10 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send, Sun, Moon, Smartphone } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemePreference } from "@/lib/theme";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,29 +25,13 @@ import okiroLogo from "@/assets/okiro-logo.png";
 const AdminPanel = lazy(() => import("@/components/AdminPanel"));
 const MemoryMap = lazy(() => import("@/components/MemoryMap"));
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
-function arrayBuffersEqual(a: ArrayBuffer | null, b: Uint8Array): boolean {
-  if (!a) return false;
-  const av = new Uint8Array(a);
-  if (av.length !== b.length) return false;
-  for (let i = 0; i < av.length; i++) if (av[i] !== b[i]) return false;
-  return true;
-}
-
 interface MemoryLocation {
   date: string;
   note: string | null;
   latitude: number;
   longitude: number;
 }
+
 
 export default function Profile() {
   const { user, signOut, subscribed, isTrialing, trialDaysLeft, subscriptionEnd, checkSubscription, subscriptionLoading } = useAuth();
