@@ -592,22 +592,22 @@ export default function Profile() {
             Delete account
           </button>
         </motion.div>
-      </div>
 
-      <footer className="px-6 py-6 text-center space-y-2">
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-body text-xs text-muted-foreground">
-          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-          <span aria-hidden>·</span>
-          <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-          <span aria-hidden>·</span>
-          <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
-          <span aria-hidden>·</span>
-          <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
-        </div>
-        <p className="font-body text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Okiro
-        </p>
-      </footer>
+        <footer className="pt-6 pb-8 text-center space-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-body text-xs text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <span aria-hidden>·</span>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <span aria-hidden>·</span>
+            <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+            <span aria-hidden>·</span>
+            <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
+          </div>
+          <p className="font-body text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Okiro
+          </p>
+        </footer>
+      </div>
 
       {/* Delete Account Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
