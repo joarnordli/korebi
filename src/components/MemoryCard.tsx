@@ -3,10 +3,9 @@ import { motion } from "framer-motion";
 import { Memory, formatDate, updateMemory } from "@/lib/memories";
 import { compressImage } from "@/lib/image-compress";
 import { useAuth } from "@/hooks/useAuth";
-import { MoreHorizontal, Check, X, ImagePlus, Pencil, Share2, Flag } from "lucide-react";
+import { MoreHorizontal, Check, X, ImagePlus, Pencil, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ReportMemoryDialog } from "@/components/ReportMemoryDialog";
 
 interface MemoryCardProps {
   memory: Memory;
