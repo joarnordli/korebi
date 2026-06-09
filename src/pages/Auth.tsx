@@ -27,8 +27,14 @@ export default function Auth() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+  const passwordMismatch =
+    password.length > 0 && confirmPassword.length > 0 && password !== confirmPassword;
+  const signupReady = passwordsMatch && password.length >= 6;
   const [consent, setConsent] = useConsentState();
 
   // OAuth consent confirm dialog
