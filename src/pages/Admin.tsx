@@ -746,6 +746,37 @@ export default function Admin() {
                 {sendingTest ? "Sending…" : "Send test to my devices"}
               </button>
             </div>
+
+            {/* Migrate subs */}
+            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="w-4 h-4 text-primary" />
+                <h2 className="font-display text-sm font-bold text-foreground">
+                  Migrate weekly → monthly
+                </h2>
+              </div>
+              <p className="font-body text-xs text-muted-foreground mb-3">
+                Switches all active weekly subscribers to the new 28 NOK/month
+                plan. Stripe applies prorated credits automatically; no immediate
+                charge.
+              </p>
+              <button
+                onClick={openMigrateConfirm}
+                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                Preview & migrate
+              </button>
+              {migResult && (
+                <p className="font-body text-xs text-muted-foreground mt-2">
+                  Last run:{" "}
+                  <strong className="text-foreground">
+                    {migResult.migrated} migrated
+                  </strong>
+                  , {migResult.failed} failed (of {migResult.candidates}).
+                </p>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
