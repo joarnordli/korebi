@@ -37,6 +37,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Subscribe = lazy(() => import("./pages/Subscribe"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
@@ -122,6 +123,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="/welcome" element={<PublicRoute><Landing /></PublicRoute>} />
               <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
               <Route path="/subscribe" element={<SubscribeRoute><Subscribe /></SubscribeRoute>} />
