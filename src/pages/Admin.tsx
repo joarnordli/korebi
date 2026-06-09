@@ -6,13 +6,11 @@ import {
   Loader2,
   RefreshCw,
   Users,
-  Activity,
   CreditCard,
   Bell,
   Megaphone,
   Send,
   Download,
-  Mail,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -167,111 +165,8 @@ export default function Admin() {
     expired_cleaned: number;
   } | null>(null);
 
-  // Migration state
-  const [migConfirmOpen, setMigConfirmOpen] = useState(false);
-  const [migConfirmText, setMigConfirmText] = useState("");
-  const [migCandidates, setMigCandidates] = useState<number | null>(null);
-  const [migRunning, setMigRunning] = useState(false);
-  const [migResult, setMigResult] = useState<{
-    candidates: number;
-    migrated: number;
-    failed: number;
-  } | null>(null);
 
-  // Billing-change notification state
-  const [bnConfirmOpen, setBnConfirmOpen] = useState(false);
-  const [bnConfirmText, setBnConfirmText] = useState("");
-  const [bnRecipients, setBnRecipients] = useState<number | null>(null);
-  const [bnSample, setBnSample] = useState<string[]>([]);
-  const [bnRunning, setBnRunning] = useState(false);
-  const [bnResult, setBnResult] = useState<{
-    attempted: number;
-    enqueued: number;
-    failed: number;
-  } | null>(null);
 
-  const openMigrateConfirm = async () => {
-    setMigCandidates(null);
-    setMigConfirmOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "migrate-subscriptions",
-        { body: { preview: true } },
-      );
-      if (error) throw error;
-      setMigCandidates(data?.candidates ?? 0);
-    } catch (e: any) {
-      toast.error(e.message || "Could not preview migration");
-    }
-  };
-
-  const handleMigrate = async () => {
-    if (migConfirmText !== "MIGRATE") return;
-    setMigRunning(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "migrate-subscriptions",
-      );
-      if (error) throw error;
-      setMigResult({
-        candidates: data?.candidates ?? 0,
-        migrated: data?.migrated ?? 0,
-        failed: data?.failed ?? 0,
-      });
-      toast.success(
-        `Migrated ${data?.migrated ?? 0} subscription${data?.migrated === 1 ? "" : "s"}.`,
-      );
-      setMigConfirmOpen(false);
-      setMigConfirmText("");
-    } catch (e: any) {
-      toast.error(e.message || "Migration failed");
-    } finally {
-      setMigRunning(false);
-    }
-  };
-
-  const openBillingNoticeConfirm = async () => {
-    setBnRecipients(null);
-    setBnSample([]);
-    setBnConfirmOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "notify-billing-change",
-        { body: { dryRun: true } },
-      );
-      if (error) throw error;
-      setBnRecipients(data?.recipientCount ?? 0);
-      setBnSample(data?.sampleEmails ?? []);
-    } catch (e: any) {
-      toast.error(e.message || "Could not preview recipients");
-    }
-  };
-
-  const handleBillingNoticeSend = async () => {
-    if (bnConfirmText !== "SEND") return;
-    setBnRunning(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "notify-billing-change",
-        { body: { dryRun: false } },
-      );
-      if (error) throw error;
-      setBnResult({
-        attempted: data?.attempted ?? 0,
-        enqueued: data?.enqueued ?? 0,
-        failed: data?.failed ?? 0,
-      });
-      toast.success(
-        `Queued ${data?.enqueued ?? 0} email${data?.enqueued === 1 ? "" : "s"}.`,
-      );
-      setBnConfirmOpen(false);
-      setBnConfirmText("");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to send notice");
-    } finally {
-      setBnRunning(false);
-    }
-  };
 
 
   const handleSendTest = async () => {
@@ -805,69 +700,8 @@ export default function Admin() {
               </button>
             </div>
 
-            {/* Migrate subs */}
-            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="w-4 h-4 text-primary" />
-                <h2 className="font-display text-sm font-bold text-foreground">
-                  Migrate weekly → monthly
-                </h2>
-              </div>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Switches all active weekly subscribers to the new 28 NOK/month
-                plan. Stripe applies prorated credits automatically; no immediate
-                charge.
-              </p>
-              <button
-                onClick={openMigrateConfirm}
-                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                Preview & migrate
-              </button>
-              {migResult && (
-                <p className="font-body text-xs text-muted-foreground mt-2">
-                  Last run:{" "}
-                  <strong className="text-foreground">
-                    {migResult.migrated} migrated
-                  </strong>
-                  , {migResult.failed} failed (of {migResult.candidates}).
-                </p>
-              )}
-            </div>
-
-            {/* Billing change notice */}
-            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Mail className="w-4 h-4 text-primary" />
-                <h2 className="font-display text-sm font-bold text-foreground">
-                  Notify subscribers of new monthly pricing
-                </h2>
-              </div>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Sends a one-time email to everyone with an active or trialing
-                subscription explaining that the new standard is 28 NOK/month.
-                Run this <strong>after</strong> the weekly → monthly migration.
-                Re-running is safe — idempotency keys prevent duplicate sends.
-              </p>
-              <button
-                onClick={openBillingNoticeConfirm}
-                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                Preview & send
-              </button>
-              {bnResult && (
-                <p className="font-body text-xs text-muted-foreground mt-2">
-                  Last run:{" "}
-                  <strong className="text-foreground">
-                    {bnResult.enqueued} queued
-                  </strong>
-                  , {bnResult.failed} failed (of {bnResult.attempted}).
-                </p>
-              )}
-            </div>
           </TabsContent>
+
 
         </Tabs>
       </div>
@@ -937,154 +771,6 @@ export default function Admin() {
                 <Send className="w-4 h-4" />
               )}
               {bcSending ? "Sending…" : "Send now"}
-            </button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Migration confirmation */}
-      <AlertDialog
-        open={migConfirmOpen}
-        onOpenChange={(open) => {
-          if (!migRunning) {
-            setMigConfirmOpen(open);
-            if (!open) setMigConfirmText("");
-          }
-        }}
-      >
-        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-lg text-foreground">
-              Migrate weekly subscribers?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
-              {migCandidates === null ? (
-                <>Counting active weekly subscriptions…</>
-              ) : (
-                <>
-                  <strong className="text-foreground">{migCandidates}</strong>{" "}
-                  active weekly subscription{migCandidates === 1 ? "" : "s"} will
-                  be switched to 28 NOK/month with prorated credits. This cannot
-                  be undone in one click.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-1">
-            <label className="font-body text-xs text-muted-foreground block mb-1.5">
-              Type <strong className="text-foreground">MIGRATE</strong> to confirm
-            </label>
-            <input
-              type="text"
-              value={migConfirmText}
-              onChange={(e) => setMigConfirmText(e.target.value)}
-              placeholder="MIGRATE"
-              disabled={migRunning}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-            />
-          </div>
-          <AlertDialogFooter className="flex-row gap-2">
-            <AlertDialogCancel
-              disabled={migRunning}
-              className="flex-1 rounded-xl font-body text-sm"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <button
-              onClick={handleMigrate}
-              disabled={
-                migConfirmText !== "MIGRATE" ||
-                migRunning ||
-                migCandidates === 0
-              }
-              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
-            >
-              {migRunning ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CreditCard className="w-4 h-4" />
-              )}
-              {migRunning ? "Migrating…" : "Migrate now"}
-            </button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Billing-change notice confirmation */}
-      <AlertDialog
-        open={bnConfirmOpen}
-        onOpenChange={(open) => {
-          if (!bnRunning) {
-            setBnConfirmOpen(open);
-            if (!open) setBnConfirmText("");
-          }
-        }}
-      >
-        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-lg text-foreground">
-              Send billing-change email?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
-              {bnRecipients === null ? (
-                <>Counting recipients…</>
-              ) : (
-                <>
-                  <strong className="text-foreground">{bnRecipients}</strong>{" "}
-                  subscriber{bnRecipients === 1 ? "" : "s"} (active + trialing)
-                  will receive a one-time notice about the new 28 NOK/month
-                  standard.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {bnSample.length > 0 && (
-            <div className="rounded-xl border border-border bg-secondary/40 p-3">
-              <p className="font-body text-[11px] text-muted-foreground mb-1">
-                Sample recipients:
-              </p>
-              <ul className="font-body text-xs text-foreground space-y-0.5">
-                {bnSample.map((e) => (
-                  <li key={e} className="truncate">{e}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div className="py-1">
-            <label className="font-body text-xs text-muted-foreground block mb-1.5">
-              Type <strong className="text-foreground">SEND</strong> to confirm
-            </label>
-            <input
-              type="text"
-              value={bnConfirmText}
-              onChange={(e) => setBnConfirmText(e.target.value)}
-              placeholder="SEND"
-              disabled={bnRunning}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-            />
-          </div>
-          <AlertDialogFooter className="flex-row gap-2">
-            <AlertDialogCancel
-              disabled={bnRunning}
-              className="flex-1 rounded-xl font-body text-sm"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <button
-              onClick={handleBillingNoticeSend}
-              disabled={
-                bnConfirmText !== "SEND" ||
-                bnRunning ||
-                bnRecipients === 0
-              }
-              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
-            >
-              {bnRunning ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Mail className="w-4 h-4" />
-              )}
-              {bnRunning ? "Sending…" : "Send now"}
             </button>
           </AlertDialogFooter>
         </AlertDialogContent>

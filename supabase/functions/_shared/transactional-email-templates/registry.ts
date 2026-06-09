@@ -1,7 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import { template as welcomeTemplate } from './welcome.tsx'
 import { template as abuseReportTemplate } from './abuse-report.tsx'
-import { template as billingChangeTemplate } from './billing-change-notice.tsx'
 
 export interface TemplateEntry {
   component: React.ComponentType<any>
@@ -16,6 +15,4 @@ export interface TemplateEntry {
 export const TEMPLATES: Record<string, TemplateEntry> = {
   welcome: welcomeTemplate,
   'abuse-report': abuseReportTemplate,
-  'billing-change-notice': billingChangeTemplate,
 }
-
