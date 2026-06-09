@@ -60,34 +60,35 @@ export default function EnablePushBanner() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
-          className="mx-6 mt-4 rounded-2xl border border-border bg-card shadow-card p-4 flex items-start gap-3"
+          className="relative mx-6 mt-4 rounded-2xl border border-border/40 bg-card/40 p-5 flex flex-col items-center text-center gap-3"
         >
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <Bell className="w-4 h-4 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-body text-sm font-medium text-foreground">
-              Get a gentle daily nudge
-            </p>
-            <p className="font-body text-xs text-muted-foreground mt-0.5">
-              We'll remind you each morning to capture today's moment.
-            </p>
-            <button
-              onClick={handleEnable}
-              disabled={busy}
-              className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-body text-xs font-semibold disabled:opacity-60"
-            >
-              {busy ? "Enabling…" : "Enable reminders"}
-            </button>
-          </div>
           <button
             onClick={handleDismiss}
             aria-label="Dismiss"
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute top-3 right-3 text-muted-foreground/60 hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+            <Bell className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <p className="font-body text-sm font-medium text-foreground">
+              Get a gentle daily nudge
+            </p>
+            <p className="font-body text-xs text-muted-foreground max-w-xs">
+              We'll remind you each morning to capture today's moment.
+            </p>
+          </div>
+          <button
+            onClick={handleEnable}
+            disabled={busy}
+            className="mt-1 px-3 py-1.5 rounded-lg bg-primary/80 text-primary-foreground font-body text-xs font-semibold disabled:opacity-60 hover:bg-primary transition-colors"
+          >
+            {busy ? "Enabling…" : "Enable reminders"}
+          </button>
         </motion.div>
+
       )}
     </AnimatePresence>
   );
