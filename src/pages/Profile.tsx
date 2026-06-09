@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
-import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Bell, Flame, MapPin, Megaphone, Send, Sun, Moon, Smartphone } from "lucide-react";
+import { LogOut, Download, Crown, ArrowLeft, Loader2, Check, User, Trash2, Flame, MapPin, Sun, Moon, Smartphone, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemePreference } from "@/lib/theme";
 
@@ -22,7 +22,6 @@ import {
 import okiroLogo from "@/assets/okiro-logo.png";
 
 // Lazy-load heavy modules so they don't bloat the initial Profile chunk.
-const AdminPanel = lazy(() => import("@/components/AdminPanel"));
 const MemoryMap = lazy(() => import("@/components/MemoryMap"));
 
 interface MemoryLocation {
@@ -43,89 +42,12 @@ export default function Profile() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [sendingTest, setSendingTest] = useState(false);
 
-  // ===== Admin broadcast =====
   const ADMIN_USER_IDS = new Set<string>(["123f18ad-9a45-4dcb-9527-61cb2be423d0"]);
   const isAdmin = !!user && ADMIN_USER_IDS.has(user.id);
-  const [bcTitle, setBcTitle] = useState("Okiro");
-  const [bcBody, setBcBody] = useState("");
-  const [bcUrl, setBcUrl] = useState("/");
-  const [bcRecipients, setBcRecipients] = useState<number | null>(null);
-  const [bcConfirmOpen, setBcConfirmOpen] = useState(false);
-  const [bcConfirmText, setBcConfirmText] = useState("");
-  const [bcSending, setBcSending] = useState(false);
-  
-  const [bcResult, setBcResult] = useState<{ sent: number; failed: number; expired_cleaned: number } | null>(null);
-
-  const openBroadcastConfirm = async () => {
-    if (!bcTitle.trim() || !bcBody.trim()) {
-      toast.error("Title and body are required");
-      return;
-    }
-    setBcRecipients(null);
-    setBcConfirmOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-broadcast", {
-        body: { preview: true, audience: "all_subscriptions" },
-      });
-      if (error) throw error;
-      setBcRecipients(data?.recipients ?? 0);
-    } catch (err: any) {
-      toast.error(err.message || "Could not preview audience");
-    }
-  };
-
-
-  const handleBcSend = async () => {
-    if (bcConfirmText !== "SEND") return;
-    setBcSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-broadcast", {
-        body: {
-          title: bcTitle.trim(),
-          body: bcBody.trim(),
-          url: bcUrl.trim() || "/",
-          audience: "all_subscriptions",
-        },
-      });
-      if (error) throw error;
-      setBcResult({
-        sent: data?.sent ?? 0,
-        failed: data?.failed ?? 0,
-        expired_cleaned: data?.expired_cleaned ?? 0,
-      });
-      toast.success(`Broadcast sent to ${data?.sent ?? 0} device${data?.sent === 1 ? "" : "s"}.`);
-      setBcConfirmOpen(false);
-      setBcConfirmText("");
-      setBcBody("");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send broadcast");
-    } finally {
-      setBcSending(false);
-    }
-  };
 
   const { streak, locations } = useMemories();
 
-  const handleSendTest = async () => {
-    if (sendingTest) return;
-    setSendingTest(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-test-notification");
-      if (error) throw error;
-      if (data?.sent > 0) {
-        toast.success(`Test notification sent to ${data.sent} device${data.sent === 1 ? "" : "s"}. Check your phone!`);
-      } else {
-        const reason = data?.results?.[0]?.reason || "Unknown error";
-        toast.error(`Couldn't send test (${reason}).`);
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send test notification");
-    } finally {
-      setSendingTest(false);
-    }
-  };
 
 
   const handleManageSubscription = async () => {
@@ -299,96 +221,33 @@ export default function Profile() {
           </motion.div>
         )}
 
-        {/* Admin: Broadcast push */}
+        {/* Admin dashboard link */}
         {isAdmin && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.09 }}
-            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-            <div className="flex items-center gap-2 mb-3">
-              <Megaphone className="w-4 h-4 text-primary" />
-              <h2 className="font-display text-sm font-bold text-foreground">Admin · Broadcast</h2>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">Title</label>
-                <input
-                  type="text"
-                  value={bcTitle}
-                  maxLength={80}
-                  onChange={(e) => setBcTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">
-                  Body <span className="text-muted-foreground/70">({bcBody.length}/200)</span>
-                </label>
-                <textarea
-                  value={bcBody}
-                  maxLength={200}
-                  rows={3}
-                  placeholder="What do you want to say?"
-                  onChange={(e) => setBcBody(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                />
-              </div>
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">Open URL when tapped</label>
-                <input
-                  type="text"
-                  value={bcUrl}
-                  onChange={(e) => setBcUrl(e.target.value)}
-                  placeholder="/"
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div className="pt-1">
-                <button
-                  onClick={openBroadcastConfirm}
-                  className="w-full py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
-                  <Send className="w-3.5 h-3.5" />
-                  Send to all push subscribers
-                </button>
-              </div>
-
-
-              {bcResult && (
-                <p className="font-body text-xs text-muted-foreground">
-                  Last send: <strong className="text-foreground">{bcResult.sent} delivered</strong>, {bcResult.failed} failed, {bcResult.expired_cleaned} expired cleaned.
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Admin: Test notification */}
-        {isAdmin && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.095 }}
-            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-            <div className="flex items-center gap-2 mb-3">
-              <Bell className="w-4 h-4 text-primary" />
-              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
-            </div>
+          >
             <button
-              onClick={handleSendTest}
-              disabled={sendingTest}
-              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-              {sendingTest ? "Sending…" : "Send test notification to my devices"}
+              onClick={() => navigate("/admin")}
+              className="w-full bg-card rounded-2xl shadow-card p-4 border border-primary/30 flex items-center gap-3 hover:bg-secondary/30 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-display text-sm font-bold text-foreground">
+                  Admin dashboard
+                </p>
+                <p className="font-body text-xs text-muted-foreground">
+                  Metrics, users, revenue, broadcasts
+                </p>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-muted-foreground rotate-180" />
             </button>
           </motion.div>
         )}
 
-        {isAdmin && (
-          <Suspense fallback={null}>
-            <AdminPanel />
-          </Suspense>
-        )}
 
         {/* Subscription Status */}
         <motion.div
