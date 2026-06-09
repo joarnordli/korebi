@@ -7,9 +7,9 @@ import {
   enablePush,
   pushSupported,
   isIOSWithoutStandalone,
-  pushDismissed,
   markPushDismissed,
 } from "@/lib/push";
+
 
 const SESSION_HIDE_KEY = "okiro:push_banner_session_hidden";
 
