@@ -339,6 +339,7 @@ export default function Admin() {
               <StatCard
                 accent
                 label="Total users"
+                info="All registered accounts in the app."
                 value={t?.users ?? "—"}
                 sub={
                   t
@@ -349,6 +350,7 @@ export default function Admin() {
               <StatCard
                 accent
                 label="MRR"
+                info="Monthly Recurring Revenue — total subscription revenue expected this month."
                 value={
                   stripeMetrics
                     ? fmtMoney(stripeMetrics.mrr_cents, stripeMetrics.mrr_currency)
@@ -365,6 +367,7 @@ export default function Admin() {
               <StatCard
                 accent
                 label="Memories"
+                info="Total photos uploaded across all users."
                 value={t?.memories ?? "—"}
                 sub={
                   t ? `+${t.memories_7d} in last 7d` : undefined
@@ -372,26 +375,31 @@ export default function Admin() {
               />
               <StatCard
                 label="DAU"
+                info="Daily Active Users — unique users who uploaded a memory today."
                 value={a?.dau ?? "—"}
                 sub="captured today"
               />
               <StatCard
                 label="WAU"
+                info="Weekly Active Users — unique users who uploaded a memory in the last 7 days."
                 value={a?.wau ?? "—"}
                 sub="last 7 days"
               />
               <StatCard
                 label="MAU"
+                info="Monthly Active Users — unique users who uploaded a memory in the last 30 days."
                 value={a?.mau ?? "—"}
                 sub="last 30 days"
               />
               <StatCard
                 label="Trials"
+                info="Users currently in their 7-day free trial period."
                 value={t?.trialing_subscriptions ?? "—"}
                 sub="in progress"
               />
               <StatCard
                 label="Churn (30d)"
+                info="Percentage of paying subscribers who canceled in the last 30 days."
                 value={
                   stripeMetrics
                     ? `${(stripeMetrics.churn_rate_30d * 100).toFixed(1)}%`
@@ -405,6 +413,7 @@ export default function Admin() {
               />
               <StatCard
                 label="Storage used"
+                info="Total encrypted photo storage consumed across all users."
                 value={t ? fmtBytes(t.storage_bytes) : "—"}
                 sub={
                   t && t.users > 0
@@ -414,6 +423,7 @@ export default function Admin() {
               />
               <StatCard
                 label="Push subs"
+                info="Users who enabled push notifications for daily reminders."
                 value={t?.push_subscribers ?? "—"}
                 sub={
                   t
@@ -423,6 +433,7 @@ export default function Admin() {
               />
               <StatCard
                 label="New paid (7d)"
+                info="New paying subscribers who started a subscription in the last 7 days."
                 value={stripeMetrics?.new_paid_7d ?? "—"}
                 sub={
                   stripeMetrics
@@ -432,6 +443,7 @@ export default function Admin() {
               />
               <StatCard
                 label="Avg memories/user"
+                info="Average number of photos uploaded per registered user."
                 value={
                   t && t.users > 0
                     ? (t.memories / t.users).toFixed(1)
