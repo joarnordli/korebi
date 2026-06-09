@@ -367,21 +367,8 @@ export default function Profile() {
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
-              <div>
-                <label className="font-body text-xs text-muted-foreground block mb-1">Audience</label>
-                <select
-                  value={bcAudience}
-                  onChange={(e) => {
-                    setBcAudience(e.target.value as any);
-                    setBcRecipients(null);
-                  }}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="all_enabled">All users with reminders ON</option>
-                  <option value="all_subscriptions">All push subscriptions</option>
-                  <option value="self">Just me (dry run)</option>
-                </select>
-              </div>
+
+
 
               <div className="flex flex-col gap-2 pt-1">
                 <button
