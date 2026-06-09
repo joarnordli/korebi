@@ -564,22 +564,6 @@ export default function Profile() {
           </button>
         </motion.div>
 
-        {/* Your data */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
-          className="rounded-xl border border-border bg-card p-4 shadow-card">
-          <p className="font-body text-xs text-muted-foreground mb-2 uppercase tracking-wider">Your data</p>
-          <p className="font-body text-sm text-foreground/90 leading-relaxed mb-3">
-            Your photos are encrypted on this device before upload. We never sell your data and don't use it for ads.
-          </p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 font-body text-sm">
-            <Link to="/privacy" className="text-primary hover:underline underline-offset-2">Privacy Policy</Link>
-            <Link to="/terms" className="text-primary hover:underline underline-offset-2">Terms</Link>
-            <a href="mailto:hello@okiro.online?subject=Data%20export%20request" className="text-primary hover:underline underline-offset-2">Request data export</a>
-          </div>
-        </motion.div>
 
         {/* Sign Out */}
         <motion.div
@@ -608,22 +592,22 @@ export default function Profile() {
             Delete account
           </button>
         </motion.div>
-      </div>
 
-      <footer className="px-6 py-6 text-center space-y-2">
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-body text-xs text-muted-foreground">
-          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-          <span aria-hidden>·</span>
-          <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-          <span aria-hidden>·</span>
-          <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
-          <span aria-hidden>·</span>
-          <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
-        </div>
-        <p className="font-body text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Okiro
-        </p>
-      </footer>
+        <footer className="pt-6 pb-8 text-center space-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-body text-xs text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <span aria-hidden>·</span>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <span aria-hidden>·</span>
+            <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+            <span aria-hidden>·</span>
+            <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
+          </div>
+          <p className="font-body text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Okiro
+          </p>
+        </footer>
+      </div>
 
       {/* Delete Account Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
