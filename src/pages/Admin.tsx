@@ -6,13 +6,11 @@ import {
   Loader2,
   RefreshCw,
   Users,
-  Activity,
   CreditCard,
   Bell,
   Megaphone,
   Send,
   Download,
-  Mail,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -167,111 +165,8 @@ export default function Admin() {
     expired_cleaned: number;
   } | null>(null);
 
-  // Migration state
-  const [migConfirmOpen, setMigConfirmOpen] = useState(false);
-  const [migConfirmText, setMigConfirmText] = useState("");
-  const [migCandidates, setMigCandidates] = useState<number | null>(null);
-  const [migRunning, setMigRunning] = useState(false);
-  const [migResult, setMigResult] = useState<{
-    candidates: number;
-    migrated: number;
-    failed: number;
-  } | null>(null);
 
-  // Billing-change notification state
-  const [bnConfirmOpen, setBnConfirmOpen] = useState(false);
-  const [bnConfirmText, setBnConfirmText] = useState("");
-  const [bnRecipients, setBnRecipients] = useState<number | null>(null);
-  const [bnSample, setBnSample] = useState<string[]>([]);
-  const [bnRunning, setBnRunning] = useState(false);
-  const [bnResult, setBnResult] = useState<{
-    attempted: number;
-    enqueued: number;
-    failed: number;
-  } | null>(null);
 
-  const openMigrateConfirm = async () => {
-    setMigCandidates(null);
-    setMigConfirmOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "migrate-subscriptions",
-        { body: { preview: true } },
-      );
-      if (error) throw error;
-      setMigCandidates(data?.candidates ?? 0);
-    } catch (e: any) {
-      toast.error(e.message || "Could not preview migration");
-    }
-  };
-
-  const handleMigrate = async () => {
-    if (migConfirmText !== "MIGRATE") return;
-    setMigRunning(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "migrate-subscriptions",
-      );
-      if (error) throw error;
-      setMigResult({
-        candidates: data?.candidates ?? 0,
-        migrated: data?.migrated ?? 0,
-        failed: data?.failed ?? 0,
-      });
-      toast.success(
-        `Migrated ${data?.migrated ?? 0} subscription${data?.migrated === 1 ? "" : "s"}.`,
-      );
-      setMigConfirmOpen(false);
-      setMigConfirmText("");
-    } catch (e: any) {
-      toast.error(e.message || "Migration failed");
-    } finally {
-      setMigRunning(false);
-    }
-  };
-
-  const openBillingNoticeConfirm = async () => {
-    setBnRecipients(null);
-    setBnSample([]);
-    setBnConfirmOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "notify-billing-change",
-        { body: { dryRun: true } },
-      );
-      if (error) throw error;
-      setBnRecipients(data?.recipientCount ?? 0);
-      setBnSample(data?.sampleEmails ?? []);
-    } catch (e: any) {
-      toast.error(e.message || "Could not preview recipients");
-    }
-  };
-
-  const handleBillingNoticeSend = async () => {
-    if (bnConfirmText !== "SEND") return;
-    setBnRunning(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "notify-billing-change",
-        { body: { dryRun: false } },
-      );
-      if (error) throw error;
-      setBnResult({
-        attempted: data?.attempted ?? 0,
-        enqueued: data?.enqueued ?? 0,
-        failed: data?.failed ?? 0,
-      });
-      toast.success(
-        `Queued ${data?.enqueued ?? 0} email${data?.enqueued === 1 ? "" : "s"}.`,
-      );
-      setBnConfirmOpen(false);
-      setBnConfirmText("");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to send notice");
-    } finally {
-      setBnRunning(false);
-    }
-  };
 
 
   const handleSendTest = async () => {
@@ -805,69 +700,8 @@ export default function Admin() {
               </button>
             </div>
 
-            {/* Migrate subs */}
-            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="w-4 h-4 text-primary" />
-                <h2 className="font-display text-sm font-bold text-foreground">
-                  Migrate weekly → monthly
-                </h2>
-              </div>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Switches all active weekly subscribers to the new 28 NOK/month
-                plan. Stripe applies prorated credits automatically; no immediate
-                charge.
-              </p>
-              <button
-                onClick={openMigrateConfirm}
-                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                Preview & migrate
-              </button>
-              {migResult && (
-                <p className="font-body text-xs text-muted-foreground mt-2">
-                  Last run:{" "}
-                  <strong className="text-foreground">
-                    {migResult.migrated} migrated
-                  </strong>
-                  , {migResult.failed} failed (of {migResult.candidates}).
-                </p>
-              )}
-            </div>
-
-            {/* Billing change notice */}
-            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Mail className="w-4 h-4 text-primary" />
-                <h2 className="font-display text-sm font-bold text-foreground">
-                  Notify subscribers of new monthly pricing
-                </h2>
-              </div>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Sends a one-time email to everyone with an active or trialing
-                subscription explaining that the new standard is 28 NOK/month.
-                Run this <strong>after</strong> the weekly → monthly migration.
-                Re-running is safe — idempotency keys prevent duplicate sends.
-              </p>
-              <button
-                onClick={openBillingNoticeConfirm}
-                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                Preview & send
-              </button>
-              {bnResult && (
-                <p className="font-body text-xs text-muted-foreground mt-2">
-                  Last run:{" "}
-                  <strong className="text-foreground">
-                    {bnResult.enqueued} queued
-                  </strong>
-                  , {bnResult.failed} failed (of {bnResult.attempted}).
-                </p>
-              )}
-            </div>
           </TabsContent>
+
 
         </Tabs>
       </div>
