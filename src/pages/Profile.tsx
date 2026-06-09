@@ -383,32 +383,22 @@ export default function Profile() {
                 </select>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 pt-1">
                 <button
-                  onClick={handleBcPreview}
-                  disabled={bcPreviewing}
-                  className="flex-1 py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-                  {bcPreviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Count recipients"}
+                  onClick={handleBcSendSelf}
+                  disabled={bcSendingSelf}
+                  className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+                  {bcSendingSelf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {bcSendingSelf ? "Sending…" : "Send test to myself"}
                 </button>
                 <button
-                  onClick={() => {
-                    if (!bcTitle.trim() || !bcBody.trim()) {
-                      toast.error("Title and body are required");
-                      return;
-                    }
-                    setBcConfirmOpen(true);
-                  }}
-                  className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
+                  onClick={openBroadcastConfirm}
+                  className="w-full py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
                   <Send className="w-3.5 h-3.5" />
-                  Send broadcast
+                  Send to all push subscribers
                 </button>
               </div>
 
-              {bcRecipients !== null && (
-                <p className="font-body text-xs text-muted-foreground">
-                  This audience reaches <strong className="text-foreground">{bcRecipients}</strong> device{bcRecipients === 1 ? "" : "s"}.
-                </p>
-              )}
               {bcResult && (
                 <p className="font-body text-xs text-muted-foreground">
                   Last send: <strong className="text-foreground">{bcResult.sent} delivered</strong>, {bcResult.failed} failed, {bcResult.expired_cleaned} expired cleaned.
