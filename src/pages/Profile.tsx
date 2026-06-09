@@ -363,6 +363,27 @@ export default function Profile() {
           </motion.div>
         )}
 
+        {/* Admin: Test notification */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.095 }}
+            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="w-4 h-4 text-primary" />
+              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
+            </div>
+            <button
+              onClick={handleSendTest}
+              disabled={sendingTest}
+              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+              {sendingTest ? "Sending…" : "Send test notification to my devices"}
+            </button>
+          </motion.div>
+        )}
+
         {isAdmin && (
           <Suspense fallback={null}>
             <AdminPanel />
@@ -480,26 +501,7 @@ export default function Profile() {
           </p>
         </motion.div>
 
-        {/* Admin: Test notification */}
-        {isAdmin && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-            <div className="flex items-center gap-2 mb-3">
-              <Bell className="w-4 h-4 text-primary" />
-              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
-            </div>
-            <button
-              onClick={handleSendTest}
-              disabled={sendingTest}
-              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-              {sendingTest ? "Sending…" : "Send test notification to my devices"}
-            </button>
-          </motion.div>
-        )}
+
 
 
         {/* Download Memories */}
