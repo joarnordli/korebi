@@ -123,130 +123,6 @@ export default function Profile() {
 
   const { streak, locations } = useMemories();
 
-  // Check current reminder status
-  useEffect(() => {
-    if (!user) return;
-    const checkReminders = async () => {
-      const { data } = await supabase.
-      from("push_subscriptions").
-      select("id, reminder_enabled, reminder_window_start, reminder_window_end").
-      eq("user_id", user.id).
-      limit(1);
-      const row = data && data.length > 0 ? data[0] : null;
-      setRemindersEnabled(!!row?.reminder_enabled);
-      if (row) {
-        setWindowStart(row.reminder_window_start ?? 10);
-        setWindowEnd(row.reminder_window_end ?? 21);
-      }
-      setRemindersLoading(false);
-    };
-    checkReminders();
-  }, [user]);
-
-  const handleToggleReminders = async (enabled: boolean) => {
-    if (togglingReminders) return;
-    setTogglingReminders(true);
-
-    try {
-      if (enabled) {
-        if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-          toast.error("Push notifications are not supported in this browser.");
-          setTogglingReminders(false);
-          return;
-        }
-
-        // iOS Safari requires the app be installed to the Home Screen
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-        const isStandalone =
-          (window.navigator as any).standalone === true ||
-          window.matchMedia("(display-mode: standalone)").matches;
-        if (isIOS && !isStandalone) {
-          toast.error("On iPhone, add Okiro to your Home Screen first, then open it from there to enable reminders.");
-          setTogglingReminders(false);
-          return;
-        }
-
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          toast.error("Notification permission denied. Please enable it in your browser settings.");
-          setTogglingReminders(false);
-          return;
-        }
-
-        // Race the SW ready against a timeout so a failed SW registration doesn't hang us forever
-        const registration = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<ServiceWorkerRegistration>((_, reject) =>
-            setTimeout(() => reject(new Error("Service worker not ready (registration may have failed)")), 5000)
-          ),
-        ]);
-
-        // Always use the backend's current VAPID public key so client and server stay in sync
-        const { data: keyData, error: keyError } = await supabase.functions.invoke("get-vapid-key");
-        if (keyError || !keyData?.publicKey) {
-          throw new Error("Could not fetch push key from server");
-        }
-        const vapidKey = keyData.publicKey as string;
-        const vapidKeyBytes = urlBase64ToUint8Array(vapidKey);
-
-        // If the device already has a subscription bound to a different key, drop it first
-        const existing = await registration.pushManager.getSubscription();
-        if (existing) {
-          const existingKey = existing.options?.applicationServerKey ?? null;
-          if (!arrayBuffersEqual(existingKey, vapidKeyBytes)) {
-            try { await existing.unsubscribe(); } catch { /* ignore */ }
-            await supabase.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
-          }
-        }
-
-        const subscription =
-          (await registration.pushManager.getSubscription()) ??
-          (await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: vapidKeyBytes,
-          }));
-
-        const subJson = subscription.toJSON();
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-        const { error: upsertError } = await supabase.from("push_subscriptions").upsert(
-          {
-            user_id: user!.id,
-            endpoint: subJson.endpoint!,
-            p256dh: subJson.keys!.p256dh!,
-            auth: subJson.keys!.auth!,
-            timezone,
-            reminder_enabled: true
-          },
-          { onConflict: "user_id,endpoint" }
-        );
-        if (upsertError) throw upsertError;
-
-        setRemindersEnabled(true);
-        toast.success("Daily reminders enabled! You'll get a nudge between 10 AM and 10 PM.");
-      } else {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
-          if (subscription) await subscription.unsubscribe();
-        } catch {
-          // Continue even if unsubscribe fails
-        }
-        await supabase.
-        from("push_subscriptions").
-        delete().
-        eq("user_id", user!.id);
-
-        setRemindersEnabled(false);
-        toast.success("Daily reminders disabled.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update reminder settings");
-    } finally {
-      setTogglingReminders(false);
-    }
-  };
-
   const handleSendTest = async () => {
     if (sendingTest) return;
     setSendingTest(true);
@@ -257,7 +133,7 @@ export default function Profile() {
         toast.success(`Test notification sent to ${data.sent} device${data.sent === 1 ? "" : "s"}. Check your phone!`);
       } else {
         const reason = data?.results?.[0]?.reason || "Unknown error";
-        toast.error(`Couldn't send test (${reason}). Try toggling reminders off and on.`);
+        toast.error(`Couldn't send test (${reason}).`);
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to send test notification");
@@ -266,30 +142,6 @@ export default function Profile() {
     }
   };
 
-  const handleSaveWindow = async (newStart: number, newEnd: number) => {
-    if (!user || savingWindow) return;
-    if (newStart > newEnd) {
-      toast.error("Start time must be before end time.");
-      return;
-    }
-    setSavingWindow(true);
-    const prevStart = windowStart, prevEnd = windowEnd;
-    setWindowStart(newStart);
-    setWindowEnd(newEnd);
-    try {
-      const { error } = await supabase
-        .from("push_subscriptions")
-        .update({ reminder_window_start: newStart, reminder_window_end: newEnd })
-        .eq("user_id", user.id);
-      if (error) throw error;
-    } catch (err: any) {
-      setWindowStart(prevStart);
-      setWindowEnd(prevEnd);
-      toast.error(err.message || "Failed to save reminder window");
-    } finally {
-      setSavingWindow(false);
-    }
-  };
 
   const handleManageSubscription = async () => {
     setManagingSubscription(true);
