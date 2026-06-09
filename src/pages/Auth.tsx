@@ -27,8 +27,14 @@ export default function Auth() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+  const passwordMismatch =
+    password.length > 0 && confirmPassword.length > 0 && password !== confirmPassword;
+  const signupReady = passwordsMatch && password.length >= 6;
   const [consent, setConsent] = useConsentState();
 
   // OAuth consent confirm dialog
@@ -44,6 +50,11 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === "signup") {
+        if (!signupReady) {
+          toast.error("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -62,10 +73,17 @@ export default function Auth() {
         toast.success("Check your email to confirm your account!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          toast.error("Could not sign in – username or password incorrect.");
+          return;
+        }
       }
     } catch (err: any) {
-      toast.error(err.message);
+      if (mode === "login") {
+        toast.error("Could not sign in – username or password incorrect.");
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -188,13 +206,37 @@ export default function Auth() {
           </div>
 
           {mode === "signup" && (
+            <>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="password"
+                  placeholder="Confirm password"
+                  aria-label="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              {passwordMismatch && (
+                <p className="text-xs font-body text-destructive pl-1">Passwords do not match</p>
+              )}
+              {passwordsMatch && password.length >= 6 && (
+                <p className="text-xs font-body text-green-600 pl-1">Passwords match</p>
+              )}
+            </>
+          )}
+
+          {mode === "signup" && (
             <ConsentGate value={consent} onChange={setConsent} />
           )}
 
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"
-            disabled={loading || (mode === "signup" && !(consent.age16 && consent.tos))}
+            disabled={loading || (mode === "signup" && (!signupReady || !(consent.age16 && consent.tos)))}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-body font-semibold text-sm flex items-center justify-center gap-2 shadow-card disabled:opacity-60"
           >
             {loading ? "Please wait…" : (
