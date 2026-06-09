@@ -1,15 +1,81 @@
-# Okiro
+# Okiro — Photo Journal App
 
-> A minimalist photo journal app — capture one photo and one thought a day to build a beautiful daily diary of the moments that matter.
+> Okiro is a minimalist photo journal app for capturing one photo and one thought a day, building a beautiful daily diary of the moments that matter. Free for 7 days, then 28 NOK/month.
 
-Okiro is a daily photo journaling web app (installable as a PWA). Each day, users capture a single photo, pair it with a short reflection, and watch their feed grow into a scrollable timeline of their life. Free for 7 days, then 28 NOK/month.
+## What Okiro is
 
-## Pages
+Okiro is a daily **photo journaling** web app, installable as a Progressive Web App (PWA) on iOS and Android. Each day, users capture **one photo** and pair it with a **short reflection**. Over time, the entries form a scrollable timeline — a private, visual diary of everyday life.
 
-- [Home](/welcome): Landing page introducing Okiro, features, install guide, and pricing.
+It is designed for people who want the emotional value of journaling without the friction. One photo. One thought. Every day.
+
+**Primary keywords:** photo journal app, one photo a day app, daily photo diary, visual journaling, daily reflection app, photo memory app, mindful photography.
+
+**Operator:** Nordli Media, Carl Berners Plass 2, Oslo, Norway.
+**Domain:** https://okiro.online
+**Contact:** hello@okiro.online
+
+## Core features
+
+- **One photo a day** — A single capture each day removes pressure and forces presence.
+- **One thought** — Pair the photo with a short written reflection (a word, a sentence, a feeling).
+- **Timeline feed** — All entries form a scrollable photo diary you can revisit anytime.
+- **Streaks** — Daily streak counter to encourage consistency.
+- **Relive** — Shuffles past memories to resurface forgotten days.
+- **Daily push reminders** — Optional gentle nudges so you do not miss a day.
+- **PWA install** — Add to home screen on iPhone (Safari) or Android (Chrome). No app store needed.
+- **End-to-end privacy** — Photos are encrypted client-side (AES-256-GCM) before upload. Even infrastructure providers cannot view them.
+- **No ads, no tracking, no AI training** on your content.
+
+## Pricing
+
+- **7 days free trial** — No credit card required to start.
+- **28 NOK per month** after the trial. Tax included. Cancel anytime.
+- Billed via Stripe. EEA statutory withdrawal rights apply.
+
+## Authentication
+
+Users can sign up or sign in with:
+- Email + password
+- Google OAuth
+- Apple OAuth
+
+A 7-day trial begins automatically on account creation. Subscription is required to continue after the trial.
+
+## Public pages
+
+- [Landing / Welcome](/welcome): Marketing page — features, install guide, pricing, and call-to-action to start the free trial.
 - [Sign in / Sign up](/auth): Create an account or sign in with Google, Apple, or email.
-- [Subscribe](/subscribe): Subscription details after the free trial ends.
+- [Subscribe](/subscribe): Subscription details and Stripe checkout after the free trial ends.
+- [Privacy Policy](/privacy): GDPR-aligned policy. Covers data collection, client-side encryption, retention, user rights.
+- [Terms of Service](/terms): Eligibility, acceptable use, billing, refunds, governing law (Norway).
+- [Cookie & Storage Policy](/cookies): Minimal cookie use — strictly-necessary auth session, cache, and Stripe checkout cookies only.
+- [Unsubscribe](/unsubscribe): Token-based one-click email unsubscribe.
 
-## Optional
+## Privacy & security highlights
 
-- [Sitemap](/sitemap.xml): XML sitemap of public routes.
+- Photos encrypted on the device before upload (AES-256-GCM).
+- Hosted in the EU (Lovable Cloud / Supabase).
+- Stripe handles all payment data — Okiro never sees card details.
+- GDPR Art. 6(1)(b), (f), (a) legal bases. Full user rights: access, correction, deletion, export, restriction, withdrawal of consent.
+- Account deletion removes all data within 30 days.
+- No analytics scripts, no advertising cookies, no cross-site tracking.
+
+## Technology
+
+- Web-based PWA built with React, Vite, TypeScript, Tailwind CSS.
+- Backend: Lovable Cloud (Supabase) — Postgres, storage, auth, edge functions.
+- Payments: Stripe Checkout & Billing.
+- Push notifications: Web Push (VAPID), supported on iOS 16.4+, Android, desktop browsers.
+
+## Frequently asked questions
+
+**Is Okiro free?** Yes, for 7 days. After that it is 28 NOK/month.
+**Do I need to install anything?** No, Okiro runs in the browser. You can optionally install it to your home screen as a PWA.
+**Can I export my data?** Yes. Email hello@okiro.online or use the in-app account controls.
+**Can other people see my photos?** No. Journals are private to each user, and photos are encrypted client-side.
+**What if I miss a day?** Your streak resets, but the timeline keeps going. There is no penalty.
+**Does Okiro use my photos to train AI?** No. Never.
+
+## Sitemap
+
+- [XML Sitemap](/sitemap.xml)
