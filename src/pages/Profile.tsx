@@ -55,7 +55,7 @@ export default function Profile() {
   const [bcConfirmOpen, setBcConfirmOpen] = useState(false);
   const [bcConfirmText, setBcConfirmText] = useState("");
   const [bcSending, setBcSending] = useState(false);
-  const [bcSendingSelf, setBcSendingSelf] = useState(false);
+  
   const [bcResult, setBcResult] = useState<{ sent: number; failed: number; expired_cleaned: number } | null>(null);
 
   const openBroadcastConfirm = async () => {
@@ -76,29 +76,6 @@ export default function Profile() {
     }
   };
 
-  const handleBcSendSelf = async () => {
-    if (!bcTitle.trim() || !bcBody.trim()) {
-      toast.error("Title and body are required");
-      return;
-    }
-    setBcSendingSelf(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-broadcast", {
-        body: {
-          title: bcTitle.trim(),
-          body: bcBody.trim(),
-          url: bcUrl.trim() || "/",
-          audience: "self",
-        },
-      });
-      if (error) throw error;
-      toast.success(`Test sent to ${data?.sent ?? 0} of your device${data?.sent === 1 ? "" : "s"}.`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send test");
-    } finally {
-      setBcSendingSelf(false);
-    }
-  };
 
   const handleBcSend = async () => {
     if (bcConfirmText !== "SEND") return;
@@ -367,17 +344,7 @@ export default function Profile() {
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
-
-
-
-              <div className="flex flex-col gap-2 pt-1">
-                <button
-                  onClick={handleBcSendSelf}
-                  disabled={bcSendingSelf}
-                  className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-                  {bcSendingSelf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  {bcSendingSelf ? "Sending…" : "Send test to myself"}
-                </button>
+              <div className="pt-1">
                 <button
                   onClick={openBroadcastConfirm}
                   className="w-full py-2 rounded-xl bg-primary text-primary-foreground font-body text-xs font-semibold flex items-center justify-center gap-2">
@@ -386,12 +353,34 @@ export default function Profile() {
                 </button>
               </div>
 
+
               {bcResult && (
                 <p className="font-body text-xs text-muted-foreground">
                   Last send: <strong className="text-foreground">{bcResult.sent} delivered</strong>, {bcResult.failed} failed, {bcResult.expired_cleaned} expired cleaned.
                 </p>
               )}
             </div>
+          </motion.div>
+        )}
+
+        {/* Admin: Test notification */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.095 }}
+            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="w-4 h-4 text-primary" />
+              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
+            </div>
+            <button
+              onClick={handleSendTest}
+              disabled={sendingTest}
+              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
+              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+              {sendingTest ? "Sending…" : "Send test notification to my devices"}
+            </button>
           </motion.div>
         )}
 
@@ -512,26 +501,7 @@ export default function Profile() {
           </p>
         </motion.div>
 
-        {/* Admin: Test notification */}
-        {isAdmin && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
-            <div className="flex items-center gap-2 mb-3">
-              <Bell className="w-4 h-4 text-primary" />
-              <h2 className="font-display text-sm font-bold text-foreground">Admin · Test push</h2>
-            </div>
-            <button
-              onClick={handleSendTest}
-              disabled={sendingTest}
-              className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors disabled:opacity-60">
-              {sendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-              {sendingTest ? "Sending…" : "Send test notification to my devices"}
-            </button>
-          </motion.div>
-        )}
+
 
 
         {/* Download Memories */}
