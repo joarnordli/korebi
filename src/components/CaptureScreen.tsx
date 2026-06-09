@@ -45,6 +45,11 @@ export default function CaptureScreen({ onSaved, isFirstMemory = false }: Captur
     setSaving(true);
     try {
       await saveMemory(user.id, getTodayKey(), imageFile, note, gps);
+      if (isFirstMemory) {
+        // Fire-and-forget: prompt for native push permission after the user
+        // experiences saving their first memory.
+        enablePush(user.id).catch(() => { /* handled silently; banner will appear */ });
+      }
       onSaved();
     } catch (err: any) {
       toast.error(err.message || "Failed to save memory");
