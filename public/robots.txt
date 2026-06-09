@@ -1,8 +1,20 @@
+# Okiro robots policy
+# All public pages are indexable. Authenticated app surfaces and
+# checkout/push tracking URLs are excluded to keep search results clean.
+
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /*?checkout=
+Disallow: /*?n=
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /*?checkout=
+Disallow: /*?n=
 
 User-agent: Twitterbot
 Allow: /
@@ -10,7 +22,30 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+# AI / LLM crawlers — explicitly welcome
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /*?checkout=
+Disallow: /*?n=
 
 Sitemap: https://okiro.online/sitemap.xml
