@@ -165,6 +165,57 @@ export default function Admin() {
     expired_cleaned: number;
   } | null>(null);
 
+  // Migration state
+  const [migConfirmOpen, setMigConfirmOpen] = useState(false);
+  const [migConfirmText, setMigConfirmText] = useState("");
+  const [migCandidates, setMigCandidates] = useState<number | null>(null);
+  const [migRunning, setMigRunning] = useState(false);
+  const [migResult, setMigResult] = useState<{
+    candidates: number;
+    migrated: number;
+    failed: number;
+  } | null>(null);
+
+  const openMigrateConfirm = async () => {
+    setMigCandidates(null);
+    setMigConfirmOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "migrate-subscriptions",
+        { body: { preview: true } },
+      );
+      if (error) throw error;
+      setMigCandidates(data?.candidates ?? 0);
+    } catch (e: any) {
+      toast.error(e.message || "Could not preview migration");
+    }
+  };
+
+  const handleMigrate = async () => {
+    if (migConfirmText !== "MIGRATE") return;
+    setMigRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "migrate-subscriptions",
+      );
+      if (error) throw error;
+      setMigResult({
+        candidates: data?.candidates ?? 0,
+        migrated: data?.migrated ?? 0,
+        failed: data?.failed ?? 0,
+      });
+      toast.success(
+        `Migrated ${data?.migrated ?? 0} subscription${data?.migrated === 1 ? "" : "s"}.`,
+      );
+      setMigConfirmOpen(false);
+      setMigConfirmText("");
+    } catch (e: any) {
+      toast.error(e.message || "Migration failed");
+    } finally {
+      setMigRunning(false);
+    }
+  };
+
   const handleSendTest = async () => {
     if (sendingTest) return;
     setSendingTest(true);
