@@ -1,39 +1,73 @@
-# Switch from 7 NOK/week to 28 NOK/month
-
 ## Goal
-- New checkouts use the monthly price `price_1TevL9JZind3K83svagyji0k` (28 NOK / month).
-- All copy that says "7 NOK/week" updates to "28 NOK/month".
-- Existing active weekly subscribers are migrated to the monthly price with Stripe handling proration.
 
-## 1. Update checkout (price ID)
-**`supabase/functions/create-checkout/index.ts`** — line 62: replace `price: "price_1T9OdhJZind3K83s4UfCsPtL"` with `price: "price_1TevL9JZind3K83svagyji0k"`.
+Send a one-time, neutral billing-change notice to everyone with a Stripe customer record so they know the new standard is 28 NOK/month. Active weekly subs are being migrated (proration applies on next renewal); new and existing monthly subs see no change in what they pay. Trialing users are unaffected until conversion.
 
-## 2. Update UI copy (5 spots)
-| File | Change |
-|---|---|
-| `src/pages/Landing.tsx` | "Then 7 NOK/week" → "Then 28 NOK/month" |
-| `src/pages/Subscribe.tsx` | `7 NOK` / `/week` headline → `28 NOK` / `/month` |
-| `src/pages/Profile.tsx` (×3) | trial-end note, active-sub line, and "Subscribe — 7 NOK/week" button all change to monthly |
-| `src/pages/legal/Terms.tsx` | "7 NOK / week" → "28 NOK / month" |
+The email is admin-triggered from the Admin → Tools tab, not automatic.
 
-No other code references the price.
+## What the user sees
 
-## 3. Migrate existing weekly subscribers
-New admin-only edge function **`supabase/functions/migrate-subscriptions/index.ts`**:
-- Verifies caller via `is_admin` RPC (same pattern as `admin-metrics`).
-- Lists all `status: "active"` subscriptions in Stripe.
-- For each subscription whose first item is on the old weekly price (`price_1T9OdhJZind3K83s4UfCsPtL`), calls `stripe.subscriptions.update(sub.id, { items: [{ id: itemId, price: NEW_PRICE_ID }], proration_behavior: "create_prorations" })`.
-- Returns `{ migrated, skipped, failed, details }` so we can see what happened.
+Subject: "An update to your Okiro billing"
 
-Then add a button in the **Admin → Tools tab** (`src/pages/Admin.tsx`):
-- "Migrate all weekly subs to monthly" → dry-run preview first (`{ preview: true }` returns counts without mutating), then a confirm dialog requiring "MIGRATE", then real run.
-- Shows results inline after completion.
+Body (plain, no promo content):
+- Short greeting.
+- "Okiro's standard price is now 28 NOK per month (previously 7 NOK per week)."
+- "If you're currently on the weekly plan, we've moved you to monthly. Your next renewal date stays the same — on that date you'll be charged 28 NOK instead of 7 NOK, with a small proration adjustment for any unused time. After that, you'll be billed monthly."
+- "If you're already on the monthly plan or still in your free trial, nothing changes for you."
+- "Questions or want to cancel? Manage your subscription from your Profile."
+- Standard CAN-SPAM footer + unsubscribe (auto-appended by infra).
 
-Stripe behaviour: customers stay on their current billing cycle until that cycle ends, then Stripe credits the unused weekly time and charges the new monthly amount on next renewal. No immediate charge unless the user wants `proration_behavior: "always_invoice"` (I'll default to `create_prorations`, which is the safer/standard choice).
+No CTA button required, but include a small "Manage subscription" link to `/profile`.
 
-## Out of scope
-- Refunding currently-paid weekly periods (Stripe's proration credit covers this).
-- Email notifications to users about the price change — say the word if you want one.
+## Audience
+
+Everyone with a Stripe customer that has either:
+- an `active` subscription (any price), or
+- a `trialing` subscription.
+
+We exclude `canceled`/`incomplete_expired` so we don't email churned users out of the blue. Trialing users get a heads-up so the price they'll be charged at trial-end is not a surprise (this matters legally too — they signed up expecting 7 NOK/week).
+
+Dedupe by email address (one email per person even if they somehow have two subs).
+
+## Pieces to build
+
+### 1. Email template
+New React Email template at `supabase/functions/_shared/transactional-email-templates/billing-change-notice.tsx`, styled to match existing Okiro templates. Register it in `_shared/transactional-email-templates/registry.ts` as `billing-change-notice`. No per-recipient dynamic data beyond optional `displayName`.
+
+### 2. Admin edge function
+New function `supabase/functions/notify-billing-change/index.ts`:
+- Verifies caller via `is_admin` RPC (same pattern as `migrate-subscriptions`).
+- Accepts `{ dryRun: boolean }`.
+- Lists Stripe subscriptions where `status in (active, trialing)`, paginates.
+- Collects unique customer emails.
+- In `dryRun: true` mode: returns `{ recipientCount, sampleEmails: first 5 }` and sends nothing.
+- In `dryRun: false` mode: for each recipient, invokes `send-transactional-email` with:
+  - `templateName: 'billing-change-notice'`
+  - `recipientEmail: <email>`
+  - `idempotencyKey: 'billing-change-2026-06-v1-<sha256(email)>'` so re-runs don't double-send.
+  - `templateData: { displayName }` if we have it.
+- Returns `{ attempted, enqueued, failed, failures }`.
+
+### 3. Admin UI
+Add a third card in the Admin → Tools tab in `src/pages/Admin.tsx`, next to "Migrate weekly → monthly":
+- Title: "Notify subscribers of new monthly pricing"
+- Subtext explaining what it sends and to whom.
+- "Preview recipients" button → calls dry run → shows count + sample.
+- "Send notification" button → opens AlertDialog requiring typing `SEND` → calls real run → shows result inline.
+
+## Order of operations (manual)
+
+1. Run the **migrate weekly → monthly** action first.
+2. Then run the **send notification** action so the email accurately reflects the new state. If we send first, weekly users would read the email before their plan technically changed, which is fine but slightly more confusing.
+
+The plan does not automate this ordering — it's just a note in the UI helper text.
+
+## Non-goals
+
+- No scheduled/automatic send. Admin-triggered only.
+- No segmentation beyond active/trialing. Everyone gets the same copy.
+- No retry UI beyond the queue's built-in retry — failures appear in `email_send_log`.
+- No marketing content (per platform rules and good sense).
 
 ## Open question
-After migration, do you want to **archive** the old weekly price in Stripe so nothing can accidentally check out at it? If yes, I'll add that as the last step in the migration function.
+
+Should trialing users also get this email, or only currently-paying ones? My recommendation is **yes, include trialing** — they're about to be charged at the new price and deserve notice. Confirm or override before I build.
