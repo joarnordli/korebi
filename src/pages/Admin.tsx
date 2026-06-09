@@ -835,7 +835,40 @@ export default function Admin() {
                 </p>
               )}
             </div>
+
+            {/* Billing change notice */}
+            <div className="bg-card rounded-2xl shadow-card p-5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Mail className="w-4 h-4 text-primary" />
+                <h2 className="font-display text-sm font-bold text-foreground">
+                  Notify subscribers of new monthly pricing
+                </h2>
+              </div>
+              <p className="font-body text-xs text-muted-foreground mb-3">
+                Sends a one-time email to everyone with an active or trialing
+                subscription explaining that the new standard is 28 NOK/month.
+                Run this <strong>after</strong> the weekly → monthly migration.
+                Re-running is safe — idempotency keys prevent duplicate sends.
+              </p>
+              <button
+                onClick={openBillingNoticeConfirm}
+                className="w-full py-2 rounded-xl border border-border bg-background font-body text-xs font-medium text-foreground flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Preview & send
+              </button>
+              {bnResult && (
+                <p className="font-body text-xs text-muted-foreground mt-2">
+                  Last run:{" "}
+                  <strong className="text-foreground">
+                    {bnResult.enqueued} queued
+                  </strong>
+                  , {bnResult.failed} failed (of {bnResult.attempted}).
+                </p>
+              )}
+            </div>
           </TabsContent>
+
         </Tabs>
       </div>
 
@@ -976,6 +1009,87 @@ export default function Admin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Billing-change notice confirmation */}
+      <AlertDialog
+        open={bnConfirmOpen}
+        onOpenChange={(open) => {
+          if (!bnRunning) {
+            setBnConfirmOpen(open);
+            if (!open) setBnConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg text-foreground">
+              Send billing-change email?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
+              {bnRecipients === null ? (
+                <>Counting recipients…</>
+              ) : (
+                <>
+                  <strong className="text-foreground">{bnRecipients}</strong>{" "}
+                  subscriber{bnRecipients === 1 ? "" : "s"} (active + trialing)
+                  will receive a one-time notice about the new 28 NOK/month
+                  standard.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bnSample.length > 0 && (
+            <div className="rounded-xl border border-border bg-secondary/40 p-3">
+              <p className="font-body text-[11px] text-muted-foreground mb-1">
+                Sample recipients:
+              </p>
+              <ul className="font-body text-xs text-foreground space-y-0.5">
+                {bnSample.map((e) => (
+                  <li key={e} className="truncate">{e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="py-1">
+            <label className="font-body text-xs text-muted-foreground block mb-1.5">
+              Type <strong className="text-foreground">SEND</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={bnConfirmText}
+              onChange={(e) => setBnConfirmText(e.target.value)}
+              placeholder="SEND"
+              disabled={bnRunning}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+            />
+          </div>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel
+              disabled={bnRunning}
+              className="flex-1 rounded-xl font-body text-sm"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <button
+              onClick={handleBillingNoticeSend}
+              disabled={
+                bnConfirmText !== "SEND" ||
+                bnRunning ||
+                bnRecipients === 0
+              }
+              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
+            >
+              {bnRunning ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4" />
+              )}
+              {bnRunning ? "Sending…" : "Send now"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
