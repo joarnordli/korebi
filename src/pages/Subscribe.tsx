@@ -141,7 +141,7 @@ export default function Subscribe() {
 
           <div className="bg-secondary rounded-xl p-4 mb-6">
             <p className="font-display text-2xl font-bold text-foreground">
-              7 NOK<span className="font-body text-sm font-normal text-muted-foreground">/week</span>
+              28 NOK<span className="font-body text-sm font-normal text-muted-foreground">/month</span>
             </p>
             <p className="font-body text-xs text-muted-foreground mt-1">
               Tax included
