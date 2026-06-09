@@ -29,3 +29,7 @@ project_id = "evjpvgsmrojbnccgkoxv"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.record-consent]
+    verify_jwt = true
+  [functions.submit-abuse-report]
+    verify_jwt = true
