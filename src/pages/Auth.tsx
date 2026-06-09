@@ -50,6 +50,11 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === "signup") {
+        if (!signupReady) {
+          toast.error("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -68,10 +73,17 @@ export default function Auth() {
         toast.success("Check your email to confirm your account!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          toast.error("Could not sign in – username or password incorrect.");
+          return;
+        }
       }
     } catch (err: any) {
-      toast.error(err.message);
+      if (mode === "login") {
+        toast.error("Could not sign in – username or password incorrect.");
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setLoading(false);
     }
