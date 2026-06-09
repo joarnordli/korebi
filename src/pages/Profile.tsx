@@ -51,27 +51,52 @@ export default function Profile() {
   const [bcTitle, setBcTitle] = useState("Okiro");
   const [bcBody, setBcBody] = useState("");
   const [bcUrl, setBcUrl] = useState("/");
-  const [bcAudience, setBcAudience] = useState<"all_enabled" | "all_subscriptions" | "self">("all_enabled");
   const [bcRecipients, setBcRecipients] = useState<number | null>(null);
-  const [bcPreviewing, setBcPreviewing] = useState(false);
   const [bcConfirmOpen, setBcConfirmOpen] = useState(false);
   const [bcConfirmText, setBcConfirmText] = useState("");
   const [bcSending, setBcSending] = useState(false);
+  const [bcSendingSelf, setBcSendingSelf] = useState(false);
   const [bcResult, setBcResult] = useState<{ sent: number; failed: number; expired_cleaned: number } | null>(null);
 
-  const handleBcPreview = async () => {
-    setBcPreviewing(true);
+  const openBroadcastConfirm = async () => {
+    if (!bcTitle.trim() || !bcBody.trim()) {
+      toast.error("Title and body are required");
+      return;
+    }
     setBcRecipients(null);
+    setBcConfirmOpen(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-broadcast", {
-        body: { preview: true, audience: bcAudience },
+        body: { preview: true, audience: "all_subscriptions" },
       });
       if (error) throw error;
       setBcRecipients(data?.recipients ?? 0);
     } catch (err: any) {
       toast.error(err.message || "Could not preview audience");
+    }
+  };
+
+  const handleBcSendSelf = async () => {
+    if (!bcTitle.trim() || !bcBody.trim()) {
+      toast.error("Title and body are required");
+      return;
+    }
+    setBcSendingSelf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-broadcast", {
+        body: {
+          title: bcTitle.trim(),
+          body: bcBody.trim(),
+          url: bcUrl.trim() || "/",
+          audience: "self",
+        },
+      });
+      if (error) throw error;
+      toast.success(`Test sent to ${data?.sent ?? 0} of your device${data?.sent === 1 ? "" : "s"}.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test");
     } finally {
-      setBcPreviewing(false);
+      setBcSendingSelf(false);
     }
   };
 
@@ -84,7 +109,7 @@ export default function Profile() {
           title: bcTitle.trim(),
           body: bcBody.trim(),
           url: bcUrl.trim() || "/",
-          audience: bcAudience,
+          audience: "all_subscriptions",
         },
       });
       if (error) throw error;
