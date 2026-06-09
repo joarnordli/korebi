@@ -339,6 +339,7 @@ export default function Admin() {
               <StatCard
                 accent
                 label="Total users"
+                info="All registered accounts in the app."
                 value={t?.users ?? "—"}
                 sub={
                   t
