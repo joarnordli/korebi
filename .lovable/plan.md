@@ -1,73 +1,53 @@
-## Goal
+## 1. Comprehensive llms.txt
 
-Send a one-time, neutral billing-change notice to everyone with a Stripe customer record so they know the new standard is 28 NOK/month. Active weekly subs are being migrated (proration applies on next renewal); new and existing monthly subs see no change in what they pay. Trialing users are unaffected until conversion.
+Rewrite `public/llms.txt` into a rich, structured markdown document for AI crawlers (ChatGPT, Perplexity, Claude, etc.). It will include:
 
-The email is admin-triggered from the Admin → Tools tab, not automatic.
+- Elevator pitch & primary keywords ("photo journal app", "one photo a day", "daily diary app")
+- Detailed feature breakdown (one-photo-a-day capture, daily reflection, timeline/feed, streaks, "Relive" shuffle, PWA install)
+- Pricing & trial details (7 days free, then 28 NOK/month)
+- Auth methods (Google, Apple, email)
+- Complete public page directory with one-line descriptions for every route
+- Privacy & security highlights (client-side photo encryption, GDPR compliance, no ads)
+- Operator info (Nordli Media, Oslo)
+- Contact & support channels
+- Structured as clean markdown with H2/H3 sections for easy LLM parsing
 
-## What the user sees
+## 2. Proper sitemap.xml
 
-Subject: "An update to your Okiro billing"
+Replace the current hand-edited 3-entry sitemap with a generator script that includes **all** public/functional routes:
 
-Body (plain, no promo content):
-- Short greeting.
-- "Okiro's standard price is now 28 NOK per month (previously 7 NOK per week)."
-- "If you're currently on the weekly plan, we've moved you to monthly. Your next renewal date stays the same — on that date you'll be charged 28 NOK instead of 7 NOK, with a small proration adjustment for any unused time. After that, you'll be billed monthly."
-- "If you're already on the monthly plan or still in your free trial, nothing changes for you."
-- "Questions or want to cancel? Manage your subscription from your Profile."
-- Standard CAN-SPAM footer + unsubscribe (auto-appended by infra).
+- `/`, `/welcome`, `/auth`, `/subscribe`, `/privacy`, `/terms`, `/cookies`, `/unsubscribe`, `/welcome/consent`
+- Correct `lastmod`, `changefreq`, and `priority` values per page type
+- Create `scripts/generate-sitemap.ts` and wire it into `package.json` as `predev` and `prebuild` so the sitemap is always current
+- Base URL: `https://okiro.online`
 
-No CTA button required, but include a small "Manage subscription" link to `/profile`.
+## 3. Enhanced robots.txt
 
-## Audience
+Keep the multi-bot `Allow` blocks but add:
 
-Everyone with a Stripe customer that has either:
-- an `active` subscription (any price), or
-- a `trialing` subscription.
+- `Disallow` for non-indexable paths (`/admin`, `/profile`, `*?checkout=`, `*?n=`) to reduce crawl noise
+- A short comment header explaining the policy
+- Keep the `Sitemap:` directive pointing to the updated sitemap
 
-We exclude `canceled`/`incomplete_expired` so we don't email churned users out of the blue. Trialing users get a heads-up so the price they'll be charged at trial-end is not a surprise (this matters legally too — they signed up expecting 7 NOK/week).
+## 4. index.html meta refinements
 
-Dedupe by email address (one email per person even if they somehow have two subs).
+- Add `<meta name="keywords">` with target search phrases
+- Ensure `og:locale`, `og:site_name`, and `twitter:site` are present and correct
+- Add `<link rel="alternate" hreflang="en">`
+- Insert JSON-LD `WebSite` + `SoftwareApplication` schema for rich snippets (rating, price, operating system)
 
-## Pieces to build
+## Out of scope
 
-### 1. Email template
-New React Email template at `supabase/functions/_shared/transactional-email-templates/billing-change-notice.tsx`, styled to match existing Okiro templates. Register it in `_shared/transactional-email-templates/registry.ts` as `billing-change-notice`. No per-recipient dynamic data beyond optional `displayName`.
+- No changes to page UI, business logic, or auth flow
+- No new routes or components
 
-### 2. Admin edge function
-New function `supabase/functions/notify-billing-change/index.ts`:
-- Verifies caller via `is_admin` RPC (same pattern as `migrate-subscriptions`).
-- Accepts `{ dryRun: boolean }`.
-- Lists Stripe subscriptions where `status in (active, trialing)`, paginates.
-- Collects unique customer emails.
-- In `dryRun: true` mode: returns `{ recipientCount, sampleEmails: first 5 }` and sends nothing.
-- In `dryRun: false` mode: for each recipient, invokes `send-transactional-email` with:
-  - `templateName: 'billing-change-notice'`
-  - `recipientEmail: <email>`
-  - `idempotencyKey: 'billing-change-2026-06-v1-<sha256(email)>'` so re-runs don't double-send.
-  - `templateData: { displayName }` if we have it.
-- Returns `{ attempted, enqueued, failed, failures }`.
+## Files affected
 
-### 3. Admin UI
-Add a third card in the Admin → Tools tab in `src/pages/Admin.tsx`, next to "Migrate weekly → monthly":
-- Title: "Notify subscribers of new monthly pricing"
-- Subtext explaining what it sends and to whom.
-- "Preview recipients" button → calls dry run → shows count + sample.
-- "Send notification" button → opens AlertDialog requiring typing `SEND` → calls real run → shows result inline.
-
-## Order of operations (manual)
-
-1. Run the **migrate weekly → monthly** action first.
-2. Then run the **send notification** action so the email accurately reflects the new state. If we send first, weekly users would read the email before their plan technically changed, which is fine but slightly more confusing.
-
-The plan does not automate this ordering — it's just a note in the UI helper text.
-
-## Non-goals
-
-- No scheduled/automatic send. Admin-triggered only.
-- No segmentation beyond active/trialing. Everyone gets the same copy.
-- No retry UI beyond the queue's built-in retry — failures appear in `email_send_log`.
-- No marketing content (per platform rules and good sense).
-
-## Open question
-
-Should trialing users also get this email, or only currently-paying ones? My recommendation is **yes, include trialing** — they're about to be charged at the new price and deserve notice. Confirm or override before I build.
+- `public/llms.txt` (rewrite)
+- `public/robots.txt` (edit)
+- `public/sitemap.xml` (regenerated via script)
+- `scripts/generate-sitemap.ts` (new)
+- `package.json` (add predev/prebuild scripts)
+- `index.html` (meta additions)  
+  
+We also need to add a proper 404 page to redirect to if future links break. I know this helps SEO
