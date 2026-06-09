@@ -850,6 +850,74 @@ export default function Admin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Migration confirmation */}
+      <AlertDialog
+        open={migConfirmOpen}
+        onOpenChange={(open) => {
+          if (!migRunning) {
+            setMigConfirmOpen(open);
+            if (!open) setMigConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg text-foreground">
+              Migrate weekly subscribers?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-body text-sm text-muted-foreground">
+              {migCandidates === null ? (
+                <>Counting active weekly subscriptions…</>
+              ) : (
+                <>
+                  <strong className="text-foreground">{migCandidates}</strong>{" "}
+                  active weekly subscription{migCandidates === 1 ? "" : "s"} will
+                  be switched to 28 NOK/month with prorated credits. This cannot
+                  be undone in one click.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-1">
+            <label className="font-body text-xs text-muted-foreground block mb-1.5">
+              Type <strong className="text-foreground">MIGRATE</strong> to confirm
+            </label>
+            <input
+              type="text"
+              value={migConfirmText}
+              onChange={(e) => setMigConfirmText(e.target.value)}
+              placeholder="MIGRATE"
+              disabled={migRunning}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background font-body text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+            />
+          </div>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel
+              disabled={migRunning}
+              className="flex-1 rounded-xl font-body text-sm"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <button
+              onClick={handleMigrate}
+              disabled={
+                migConfirmText !== "MIGRATE" ||
+                migRunning ||
+                migCandidates === 0
+              }
+              className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground font-body text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
+            >
+              {migRunning ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CreditCard className="w-4 h-4" />
+              )}
+              {migRunning ? "Migrating…" : "Migrate now"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
