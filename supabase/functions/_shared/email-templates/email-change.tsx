@@ -14,6 +14,7 @@ import {
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { EmailFooter } from '../transactional-email-templates/footer.tsx'
 
 interface EmailChangeEmailProps {
   siteName: string
@@ -22,12 +23,7 @@ interface EmailChangeEmailProps {
   confirmationUrl: string
 }
 
-export const EmailChangeEmail = ({
-  siteName,
-  email,
-  newEmail,
-  confirmationUrl,
-}: EmailChangeEmailProps) => (
+export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }: EmailChangeEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Confirm your email change for Okiro</Preview>
@@ -41,12 +37,9 @@ export const EmailChangeEmail = ({
           to{' '}
           <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this, please secure your account immediately.
-        </Text>
+        <Button style={button} href={confirmationUrl}>Confirm Email Change</Button>
+        <Text style={footer}>If you didn't request this, please secure your account immediately.</Text>
+        <EmailFooter />
       </Container>
     </Body>
   </Html>
@@ -57,27 +50,8 @@ export default EmailChangeEmail
 const main = { backgroundColor: '#ffffff', fontFamily: "'Source Sans 3', 'Segoe UI', Arial, sans-serif" }
 const container = { padding: '32px 28px' }
 const logo = { marginBottom: '24px' }
-const h1 = {
-  fontSize: '24px',
-  fontWeight: 'bold' as const,
-  fontFamily: "'Playfair Display', Georgia, serif",
-  color: 'hsl(25, 20%, 16%)',
-  margin: '0 0 8px',
-}
-const text = {
-  fontSize: '15px',
-  color: 'hsl(25, 10%, 50%)',
-  lineHeight: '1.6',
-  margin: '0 0 20px',
-}
+const h1 = { fontSize: '24px', fontWeight: 'bold' as const, fontFamily: "'Playfair Display', Georgia, serif", color: 'hsl(25, 20%, 16%)', margin: '0 0 8px' }
+const text = { fontSize: '15px', color: 'hsl(25, 10%, 50%)', lineHeight: '1.6', margin: '0 0 20px' }
 const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: 'hsl(30, 65%, 50%)',
-  color: 'hsl(36, 33%, 97%)',
-  fontSize: '15px',
-  fontWeight: '600' as const,
-  borderRadius: '0.75rem',
-  padding: '12px 24px',
-  textDecoration: 'none',
-}
+const button = { backgroundColor: 'hsl(30, 65%, 50%)', color: 'hsl(36, 33%, 97%)', fontSize: '15px', fontWeight: '600' as const, borderRadius: '0.75rem', padding: '12px 24px', textDecoration: 'none' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

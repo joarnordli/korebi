@@ -6,6 +6,22 @@ import okiroLogo from "@/assets/okiro-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  ConsentGate,
+  useConsentState,
+  writeConsent,
+  CONSENT_TOS_VERSION,
+} from "@/components/auth/ConsentGate";
+
+const SIGNUP_INTENT_KEY = "okiro.signupIntent.v1";
 
 export default function Auth() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -13,9 +29,18 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [consent, setConsent] = useConsentState();
+
+  // OAuth consent confirm dialog
+  const [oauthDialog, setOauthDialog] = useState<null | "google" | "apple">(null);
+  const [oauthConsent, setOauthConsent] = useConsentState();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "signup" && !(consent.age16 && consent.tos)) {
+      toast.error("Please confirm your age and accept the Terms.");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -23,11 +48,17 @@ export default function Auth() {
           email,
           password,
           options: {
-            data: { full_name: name },
+            data: {
+              full_name: name,
+              consent_tos_version: CONSENT_TOS_VERSION,
+              consent_age_confirmed: true,
+            },
             emailRedirectTo: `${window.location.origin}/`,
           },
         });
         if (error) throw error;
+        writeConsent();
+        try { sessionStorage.setItem(SIGNUP_INTENT_KEY, "1"); } catch { /* ignore */ }
         toast.success("Check your email to confirm your account!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -40,18 +71,34 @@ export default function Auth() {
     }
   };
 
-  const handleGoogle = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
+  const startOAuth = async (provider: "google" | "apple") => {
+    if (mode === "signup") {
+      // Require explicit consent before redirecting
+      setOauthConsent({ age16: false, tos: false });
+      setOauthDialog(provider);
+      return;
+    }
+    await doOAuth(provider);
+  };
+
+  const doOAuth = async (provider: "google" | "apple") => {
+    try { sessionStorage.setItem(SIGNUP_INTENT_KEY, mode === "signup" ? "1" : "0"); } catch { /* ignore */ }
+    if (mode === "signup") writeConsent();
+    const { error } = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
     });
     if (error) toast.error(error.message);
   };
 
-  const handleApple = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
-    });
-    if (error) toast.error(error.message);
+  const confirmOAuth = async () => {
+    if (!oauthDialog) return;
+    if (!(oauthConsent.age16 && oauthConsent.tos)) {
+      toast.error("Please confirm both items to continue.");
+      return;
+    }
+    const provider = oauthDialog;
+    setOauthDialog(null);
+    await doOAuth(provider);
   };
 
   return (
@@ -63,7 +110,7 @@ export default function Auth() {
       >
         <div className="flex items-center gap-2 justify-center mb-2">
           <img src={okiroLogo} alt="Okiro" className="w-8 h-8" />
-        <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
+          <h1 className="font-display text-3xl font-bold text-foreground tracking-tight">
             Okiro<span className="sr-only"> — One photo. One thought. Every day.</span>
           </h1>
         </div>
@@ -72,7 +119,7 @@ export default function Auth() {
         </p>
 
         <button
-          onClick={handleGoogle}
+          onClick={() => startOAuth("google")}
           className="w-full py-3 rounded-xl border border-border bg-card font-body text-sm font-medium text-foreground flex items-center justify-center gap-3 hover:bg-secondary transition-colors mb-3"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -85,7 +132,7 @@ export default function Auth() {
         </button>
 
         <button
-          onClick={handleApple}
+          onClick={() => startOAuth("apple")}
           className="w-full py-3 rounded-xl border border-border bg-foreground font-body text-sm font-medium text-background flex items-center justify-center gap-3 hover:opacity-90 transition-opacity mb-4"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -140,10 +187,14 @@ export default function Auth() {
             />
           </div>
 
+          {mode === "signup" && (
+            <ConsentGate value={consent} onChange={setConsent} />
+          )}
+
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === "signup" && !(consent.age16 && consent.tos))}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-body font-semibold text-sm flex items-center justify-center gap-2 shadow-card disabled:opacity-60"
           >
             {loading ? "Please wait…" : (
@@ -153,15 +204,6 @@ export default function Auth() {
               </>
             )}
           </motion.button>
-
-          {mode === "signup" && (
-            <p className="font-body text-xs text-muted-foreground text-center leading-relaxed pt-1">
-              By creating an account, you agree to our{" "}
-              <Link to="/terms" className="text-foreground underline underline-offset-2">Terms</Link>{" "}
-              and{" "}
-              <Link to="/privacy" className="text-foreground underline underline-offset-2">Privacy Policy</Link>.
-            </p>
-          )}
         </form>
 
         <p className="text-center font-body text-sm text-muted-foreground mt-6">
@@ -184,6 +226,36 @@ export default function Auth() {
           <a href="mailto:hello@okiro.online" className="hover:text-foreground transition-colors">Contact</a>
         </div>
       </motion.div>
+
+      <Dialog open={!!oauthDialog} onOpenChange={(o) => !o && setOauthDialog(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Before you continue</DialogTitle>
+            <DialogDescription>
+              We need a quick confirmation before signing you up with{" "}
+              {oauthDialog === "google" ? "Google" : "Apple"}.
+            </DialogDescription>
+          </DialogHeader>
+          <ConsentGate value={oauthConsent} onChange={setOauthConsent} id="oauth-consent" />
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setOauthDialog(null)}
+              className="px-4 py-2 rounded-lg text-sm text-muted-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!(oauthConsent.age16 && oauthConsent.tos)}
+              onClick={confirmOAuth}
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+            >
+              Continue
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

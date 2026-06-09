@@ -102,6 +102,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return promise;
   }, []);
 
+  // Check if user needs to record consent (post-OAuth backstop)
+  const checkConsent = useCallback(async (userId: string) => {
+    try {
+      const localOk = (() => {
+        try {
+          const raw = localStorage.getItem("okiro.consent.v1");
+          return !!raw;
+        } catch { return false; }
+      })();
+      if (localOk) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("consent_accepted_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!data?.consent_accepted_at) {
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/welcome/consent")) {
+          window.location.replace("/welcome/consent");
+        }
+      } else {
+        try {
+          localStorage.setItem(
+            "okiro.consent.v1",
+            JSON.stringify({ age16: true, tos: true, at: data.consent_accepted_at }),
+          );
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -110,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         if (session?.user) {
           setTimeout(() => checkSubscription(), 0);
+          setTimeout(() => checkConsent(session.user.id), 0);
         } else {
           setSubscribed(false);
           setIsTrialing(false);
@@ -127,13 +158,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       if (session?.user) {
         checkSubscription();
+        checkConsent(session.user.id);
       } else {
         setSubscriptionLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [checkSubscription]);
+  }, [checkSubscription, checkConsent]);
 
   // Periodic refresh every 60s
   useEffect(() => {

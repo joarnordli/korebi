@@ -1,216 +1,183 @@
-## Goal
+# Pre-Launch Fixes — Plan
 
-Close the two "today" findings from the pre-launch audit:
-
-- **B1** — `send-reminders` and `send-engagement` are publicly callable. Anyone on the internet can hit them and trigger push spam to every subscriber.
-- **H3** — `record_push_open` is granted to `anon`, so anyone can corrupt push analytics for any event UUID.
-
-We do this without breaking the scheduled cron, the in-app `?n=<eventId>` open detector, or the service worker's `notificationclick` handler.
+Covers audit items B2, H6, B3, B4, H4. No destructive changes; all existing flows continue working. Where a flow must change (signup, OAuth, email footers), it is rewritten end-to-end.
 
 ---
 
-## Scope (today)
+## 1. Age gate + OAuth consent (B2 + H6)
 
-In scope:
-1. Add a shared `CRON_SECRET` and require it on `send-reminders` and `send-engagement`.
-2. Update the pg_cron jobs that call these two functions to send the secret header.
-3. Harden `track-push-open` + revoke `anon` access to `record_push_open`, while keeping the SW + in-app callers working.
+**Goal:** No account can be created without (a) confirming ≥16 (EEA-safe default, also clears COPPA) and (b) accepting Terms + Privacy. Applies equally to email signup, Google, and Apple.
 
-Out of scope (later tiers): age gate (B2), DMCA/report (B3), email unsubscribe + postal address (B4), encryption salt (H1), paywall localStorage (H2), OAuth consent (H6), data export (H5).
+### 1a. New shared consent component
+
+`src/components/auth/ConsentGate.tsx` (new) — small, reusable:
+
+- Checkbox 1: "I confirm I am at least 16 years old."
+- Checkbox 2: "I agree to the Terms and Privacy Policy." (links to `/terms`, `/privacy`)
+- Exposes `{ accepted: boolean }` + an `onContinue` callback only enabled when both are true.
+- Persists acceptance to `localStorage` (`okiro.consent.v1 = { age16: true, tos: true, at: ISO }`) so we can later prove consent timestamp.
+
+### 1b. `src/pages/Auth.tsx` rewrite (mode-aware)
+
+- **Login mode:** unchanged (no gate needed for existing users).
+- **Signup mode:** render `<ConsentGate />` above the email form. Email submit button stays disabled until both boxes ticked.
+- **OAuth buttons (Google + Apple):** two-step:
+  1. If signup intent (toggle `mode === "signup"`) and consent NOT recorded → clicking Google/Apple opens an inline confirm sheet (Radix `Dialog`) showing the same two checkboxes. Only after both are ticked and "Continue with Google/Apple" is pressed do we call `lovable.auth.signInWithOAuth(...)`.
+  2. If user is in login mode, OAuth proceeds immediately (provider itself handles account creation; we still record consent on first successful session — see 1c).
+- Add a hidden "signup intent" flag persisted in `sessionStorage` before redirect so we know on return whether to enforce gate.
+
+### 1c. Post-OAuth backstop
+
+In `src/hooks/useAuth.tsx` `onAuthStateChange` SIGNED_IN handler:
+
+- If `localStorage.okiro.consent.v1` missing AND `profiles.consent_accepted_at` is null → route the user to `/welcome/consent` (new minimal page) that forces the two checkboxes before they can reach `/`.
+- On confirm, write to localStorage + call new edge function `record-consent` (service-role) that stamps `profiles.consent_accepted_at`, `consent_age_confirmed`, `consent_tos_version`.
+
+### 1d. Database
+
+Migration adds 3 columns to `public.profiles`:
+
+- `consent_accepted_at timestamptz`
+- `consent_age_confirmed boolean default false`
+- `consent_tos_version text` (e.g. `"2026-06-09"`)
+
+No RLS change (existing owner-only policy already covers it). Backfill existing rows with `consent_accepted_at = created_at`, `consent_age_confirmed = true` (grandfathered) so current users aren't blocked.
+
+### 1e. New tiny edge function `record-consent`
+
+Verifies JWT, writes the three columns for `auth.uid()`. No public exposure beyond authenticated users.
 
 ---
 
-## 1. Lock down `send-reminders` and `send-engagement` (B1)
+## 2. DMCA / abuse contact + report flow on memories (B3)
 
-### Approach
-Keep `verify_jwt = false` (pg_cron does not have a user JWT). Instead, require **one of**:
-- A valid `x-cron-secret` header matching the `CRON_SECRET` env var, **or**
-- An `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` header (so admin tools / manual re-runs from the dashboard keep working).
+Memories are private (owner-only RLS) so abuse risk is mostly: (a) legal contact missing from Terms/Privacy, (b) no in-app channel if a user is coerced to host illegal content, (c) no DMCA address for rights-holders. We address all three without adding social features.
 
-Anything else → return `401`.
+### 2a. Legal pages
 
-### Changes
+- `**src/pages/legal/Terms.tsx**` — add section "12. Reporting illegal or infringing content" with:
+  - Abuse contact: `abuse@okiro.online` (alias to `hello@okiro.online`, configured at registrar — user-action note included).
+  - DMCA designated agent block (name, postal address from §3 below, email, statement that we respond within 10 business days).
+  - Right of users to report their own account being misused.
+- `**src/pages/legal/Privacy.tsx**` — add same abuse contact under §10 "Contact".
 
-**a. New secret**
-- Add `CRON_SECRET` (random 32+ byte string) via `add_secret`. Exposed to both functions automatically.
+### 2b. In-app report/delete flow on `MemoryCard`
 
-**b. `supabase/functions/_shared/auth-cron.ts` (new shared helper)**
-```ts
-export function requireCronOrServiceRole(req: Request): Response | null {
-  const cronHeader = req.headers.get("x-cron-secret");
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret && cronHeader && cronHeader === cronSecret) return null;
+Add a third action to the existing Popover (next to Share + Edit):
 
-  const auth = req.headers.get("authorization") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (serviceKey && auth === `Bearer ${serviceKey}`) return null;
+- "Report or remove" → opens a Radix `Dialog`:
+  - Radio: `It's my content and I want it deleted` | `It violates someone else's rights (DMCA)` | `Other concern`
+  - Optional textarea (max 500 chars, validated with zod).
+  - Submit:
+    - For "delete my content" → calls existing `deleteMemory` then closes.
+    - For DMCA/other → invokes new edge function `submit-abuse-report` which sends an app email (via existing `send-transactional-email`) to `abuse@okiro.online` with the memory id, user id, category, message, timestamp, and writes a row to a new `abuse_reports` table.
 
-  return new Response(JSON.stringify({ error: "Unauthorized" }), {
-    status: 401,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+### 2c. Database
+
+Migration creates `public.abuse_reports`:
+
+- `id uuid pk`, `reporter_user_id uuid`, `memory_id uuid null`, `category text check in (...)`, `message text`, `status text default 'open'`, `created_at`, `updated_at`.
+- `GRANT` block: `INSERT, SELECT` for `authenticated` (own rows), `ALL` for `service_role`.
+- RLS: insert if `auth.uid() = reporter_user_id`; select own rows; admin (`is_admin`) can select all; update only by admin.
+
+### 2d. New template
+
+`supabase/functions/_shared/transactional-email-templates/abuse-report.tsx` registered in `registry.ts` as `abuse-report` (recipient: `abuse@okiro.online`).
+
+### 2e. New edge function `submit-abuse-report`
+
+JWT-verified. Zod-validates payload. Rate-limits to 5 reports / hour / user (in-memory map). Inserts row, invokes `send-transactional-email`.
+
+---
+
+## 3. Unsubscribe link + physical postal address in every email (B4 + H4)
+
+**Goal:** CAN-SPAM compliance — every outbound email (transactional + auth) must contain a visible postal address. Marketing-class emails must additionally show a working unsubscribe link.
+
+### 3a. Shared footer component
+
+`supabase/functions/_shared/transactional-email-templates/footer.tsx` (new):
+
+- Props: `{ unsubscribeUrl?: string }`
+- Renders:
+  - Postal address block (configurable constants below)
+  - "You're receiving this because you have an Okiro account." (transactional) OR "Don't want these? [Unsubscribe]" (marketing)
+  - Link to Privacy + Terms
+
+**Postal address constants** (single source — `_shared/brand.ts`):
+
+```
+COMPANY_LEGAL_NAME = "Okiro"
+COMPANY_POSTAL = "[street], [postcode] [city], Norway"
 ```
 
-**c. Edit `supabase/functions/send-reminders/index.ts`**
-- Right after the OPTIONS preflight short-circuit, call `requireCronOrServiceRole(req)` and return its response if non-null.
-- No other logic changes.
+We will leave placeholder tokens and the implementation will halt with a question to the user for the actual address before deploy. (Question listed in the open-items section below.)
 
-**d. Edit `supabase/functions/send-engagement/index.ts`**
-- Same insertion as above.
+### 3b. Apply footer to every template
 
-**e. Migration: update existing pg_cron jobs**
-The two functions are already scheduled in pg_cron (the audit confirmed they fire hourly). We need the cron command to add `x-cron-secret`. Because the SQL was added through the dashboard, write a migration that:
+- All 6 auth templates in `_shared/email-templates/` → import + render `<Footer />` (no unsubscribe link; auth emails are exempt from opt-out but still need postal address under CAN-SPAM).
+- `welcome.tsx` (transactional) → render `<Footer unsubscribeUrl={...} />` (welcome is a borderline marketing greeting → include unsubscribe).
+- Future templates documented in `registry.ts` comment that footer is mandatory.
 
-```sql
--- Pull the current schedules, then re-schedule with the secret header.
-DO $$
-DECLARE
-  v_secret text := current_setting('app.cron_secret', true);
-BEGIN
-  -- noop here; secret is injected per job below via pg_net call body
-END $$;
+### 3c. Unsubscribe URL generation
 
--- Unschedule old jobs if present (names are best-effort; harmless if missing)
-SELECT cron.unschedule(jobid) FROM cron.job
- WHERE command ILIKE '%send-reminders%' OR command ILIKE '%send-engagement%';
+`send-transactional-email` already issues one-click tokens via `email_unsubscribe_tokens`. Extend it to:
 
--- Re-schedule send-reminders hourly
-SELECT cron.schedule(
-  'send-reminders-hourly',
-  '0 * * * *',
-  $cmd$
-  SELECT net.http_post(
-    url := 'https://evjpvgsmrojbnccgkoxv.supabase.co/functions/v1/send-reminders',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-cron-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_secret')
-    ),
-    body := '{}'::jsonb
-  );
-  $cmd$
-);
+- Always generate (or reuse) a token per recipient.
+- Pass `unsubscribeUrl = https://okiro.online/unsubscribe?token=...` as templateData so the footer renders it.
+- Add `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers (Gmail/Yahoo Feb-2024 requirement).
 
--- Re-schedule send-engagement hourly (same pattern)
-SELECT cron.schedule(
-  'send-engagement-hourly',
-  '15 * * * *',
-  $cmd$
-  SELECT net.http_post(
-    url := 'https://evjpvgsmrojbnccgkoxv.supabase.co/functions/v1/send-engagement',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-cron-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_secret')
-    ),
-    body := '{}'::jsonb
-  );
-  $cmd$
-);
-```
+### 3d. Auth emails postal-address backstop
 
-The migration also inserts `CRON_SECRET` into Vault under name `cron_secret` so pg_cron can read it (Vault insert via `vault.create_secret`). We use the same value as the `CRON_SECRET` env var.
+`auth-email-hook/index.ts` already pre-renders HTML. Templates updated in 3b automatically pick up the new footer — no hook change needed beyond redeploy.
 
-### Disruption check
-- Cron continues firing on the same hourly schedules; only the header changes. No reminders are missed.
-- Admin "send test" or manual invocations from the Supabase dashboard still work via service-role auth.
-- Client app does not call these endpoints, so no frontend change is needed.
+### 3e. Deploy
 
-### Rollout order (single deploy window)
-1. Add `CRON_SECRET` secret + insert into Vault as `cron_secret`.
-2. Deploy updated `send-reminders` and `send-engagement` (they now accept *either* secret or service-role; this is backwards compatible until the cron jobs are updated).
-3. Apply migration that re-schedules the cron jobs with the header.
-4. Verify next cron tick in `reminder_run_log` / `engagement_run_log`.
-5. Only after a successful tick: remove the service-role bypass? No — keep it; admins need it.
+After edits, deploy: `auth-email-hook`, `send-transactional-email`, plus new `record-consent` and `submit-abuse-report`.
 
 ---
 
-## 2. Harden `track-push-open` and lock `record_push_open` (H3)
+## Technical details
 
-### Approach
-Two layered defenses, neither of which breaks the SW or in-app callers:
+### Files created
 
-**Layer A — Revoke anon RPC grant.** The function uses the service-role client, so the public grant is unnecessary.
+- `src/components/auth/ConsentGate.tsx`
+- `src/pages/WelcomeConsent.tsx` (route `/welcome/consent`)
+- `supabase/functions/record-consent/index.ts`
+- `supabase/functions/submit-abuse-report/index.ts`
+- `supabase/functions/_shared/transactional-email-templates/footer.tsx`
+- `supabase/functions/_shared/transactional-email-templates/abuse-report.tsx`
+- `supabase/functions/_shared/brand.ts`
+- 1 migration: `profiles` consent columns + backfill, `abuse_reports` table + GRANTs + RLS
 
-**Layer B — Validate eventId server-side before counting.** Only accept opens for events that:
-- Exist in `push_send_events`,
-- Were sent within the last 14 days,
-- Have `open_count < 50` (sanity cap to neutralize replay loops).
+### Files edited
 
-This stops mass-corruption without requiring the SW to send a user JWT (which it can't reliably do on iOS).
+- `src/pages/Auth.tsx` (consent gate + OAuth confirm sheet)
+- `src/hooks/useAuth.tsx` (post-OAuth consent backstop)
+- `src/App.tsx` (add `/welcome/consent` route)
+- `src/components/MemoryCard.tsx` (Report action + dialog)
+- `src/pages/legal/Terms.tsx` (DMCA section)
+- `src/pages/legal/Privacy.tsx` (abuse contact)
+- 6 auth templates in `_shared/email-templates/*.tsx` (footer)
+- `_shared/transactional-email-templates/welcome.tsx` (footer)
+- `_shared/transactional-email-templates/registry.ts` (register abuse-report)
+- `supabase/functions/send-transactional-email/index.ts` (token + footer URL + List-Unsubscribe headers)
 
-### Changes
+### Verification (after build mode)
 
-**a. Migration**
-```sql
-REVOKE EXECUTE ON FUNCTION public.record_push_open(uuid) FROM anon;
--- Keep authenticated grant so admin tools/dev console still work; the edge
--- function calls via service role and is unaffected by the grant change.
-
-CREATE OR REPLACE FUNCTION public.record_push_open(_event_id uuid)
-RETURNS void
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  UPDATE public.push_send_events
-  SET opened_at = COALESCE(opened_at, now()),
-      open_count = open_count + 1
-  WHERE id = _event_id
-    AND created_at > now() - interval '14 days'
-    AND open_count < 50;
-$$;
-```
-
-**b. Edit `supabase/functions/track-push-open/index.ts`**
-- Add per-event soft rate limit: reject if the function has already received >5 opens for the same `eventId` in the last 60 seconds. Track in an in-memory `Map<string, {count, ts}>` (instance-local, best-effort).
-- Tighten CORS: continue to allow `*` (SW + arbitrary origin), but restrict allowed methods to `POST, OPTIONS` (already done) and drop `authorization` from allowed headers since none is required.
-- Keep the existing UUID regex validation.
-
-### Disruption check
-- `public/sw.js` keeps POSTing to `/functions/v1/track-push-open` — unchanged.
-- `src/App.tsx`'s `?n=<eventId>` detector keeps calling `supabase.functions.invoke("track-push-open", ...)` — unchanged.
-- Legit users still get their open counted once; only attackers spamming the same event get throttled.
-- No client code edits required.
+- Sign up via email → cannot submit until both checkboxes ticked.
+- Sign up via Google/Apple → confirm sheet appears, consent recorded post-redirect.
+- Existing users: `profiles` backfill = no interruption.
+- Report a memory → row in `abuse_reports`, email lands in `abuse@okiro.online` inbox via process-email-queue.
+- `curl` a rendered auth email preview → footer with postal address visible; welcome email also shows unsubscribe link.
+- `process-email-queue` payload includes `List-Unsubscribe` headers.
 
 ---
 
-## Verification (after build mode)
+## Open items needing your input before build
 
-1. **Cron secret enforcement**
-   - `curl -X POST https://.../functions/v1/send-reminders` → expect `401`.
-   - `curl -X POST -H "x-cron-secret: <wrong>" ...` → `401`.
-   - Check `reminder_run_log` after the next hour tick for a fresh row → confirms pg_cron path works.
+1. **Postal address** — what legal company name + Norwegian street address should appear in email footers and the DMCA notice? (Required for CAN-SPAM + DMCA designated-agent text.) (Okiro is "owned"/made by my company Nordli Media. Adress is Carl Berners Plass 2, Oslo, Norway.
+2. **Abuse email alias** — OK to use `abuse@okiro.online` (alias → `hello@okiro.online`)? Or a different inbox? Can we just stickk with hello@okiro.0nline?
+3. **OAuth consent UX** — preferred flow: (a) inline confirm sheet before redirect (recommended, in plan), or (b) full `/welcome/consent` step only after redirect, no pre-confirm? IStick to plan
 
-2. **Push open tracking**
-   - From the running app, trigger a test push and click it → `push_send_events.open_count` increments by exactly 1.
-   - `psql` as anon role: `SELECT record_push_open('<uuid>')` → permission denied.
-   - Spam `track-push-open` with the same UUID 20×: `open_count` stops climbing at ≤6.
-
-3. **Smoke test** the live preview after deploy:
-   - Reminders still arrive at the user's preferred window.
-   - In-app `?n=` open detection still records.
-
----
-
-## Files touched
-
-```text
-supabase/functions/_shared/auth-cron.ts            (new)
-supabase/functions/send-reminders/index.ts          (+3 lines)
-supabase/functions/send-engagement/index.ts         (+3 lines)
-supabase/functions/track-push-open/index.ts         (+ rate-limit map)
-supabase/migrations/<ts>_lock_cron_and_push_open.sql (new)
-```
-
-Secrets added: `CRON_SECRET` (also mirrored into Vault as `cron_secret` for pg_cron).
-
-No frontend file is modified. No table schemas change. No data is deleted.
-
----
-
-## Rollback
-
-- **B1 fix:** redeploy the previous versions of `send-reminders` / `send-engagement` (or set `CRON_SECRET` to the value the cron job sends; if mismatched they 401 — the cron job re-schedule SQL is the only thing that can break delivery, and it's a single `cron.schedule` call that can be reverted to the previous command).
-- **H3 fix:** `GRANT EXECUTE ON FUNCTION public.record_push_open(uuid) TO anon;` and restore the older two-line function body.
-
-Ready to switch to build mode and execute.
+Once you answer 1–3 I'll implement.

@@ -10,26 +10,27 @@ import {
   Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
+import { EmailFooter } from './footer.tsx'
 
 interface Props {
   name?: string
+  unsubscribeUrl?: string
 }
 
-const WelcomeEmail = ({ name }: Props) => (
+const WelcomeEmail = ({ name, unsubscribeUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Welcome to Okiro</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={heading}>Welcome to Okiro</Heading>
-        <Text style={text}>
-          {name ? `Hi ${name},` : 'Hi there,'}
-        </Text>
+        <Text style={text}>{name ? `Hi ${name},` : 'Hi there,'}</Text>
         <Text style={text}>
           Thanks for joining Okiro — your daily place for the little moments
           that matter. Capture one photo a day and watch your year unfold.
         </Text>
         <Text style={text}>— The Okiro team</Text>
+        <EmailFooter unsubscribeUrl={unsubscribeUrl} />
       </Container>
     </Body>
   </Html>
@@ -39,7 +40,7 @@ export const template = {
   component: WelcomeEmail,
   subject: 'Welcome to Okiro',
   displayName: 'Welcome',
-  previewData: { name: 'Jane' },
+  previewData: { name: 'Jane', unsubscribeUrl: 'https://okiro.online/unsubscribe?token=preview' },
 } satisfies TemplateEntry
 
 const main = {

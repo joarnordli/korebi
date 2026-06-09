@@ -79,6 +79,32 @@ export default function Terms() {
       <p>
         Questions? Email <a href="mailto:hello@okiro.online">hello@okiro.online</a>.
       </p>
+
+      <h2>12. Reporting illegal or infringing content</h2>
+      <p>
+        Okiro stores private journals — content is visible only to the user who created it. If you
+        believe an Okiro user is hosting illegal, infringing, or abusive content (for example,
+        because of a court order, a DMCA notice, or because your account is being misused), please
+        contact us and we will respond within 10 business days.
+      </p>
+      <p>
+        <strong>Designated agent for DMCA / abuse notices:</strong>
+        <br />
+        Nordli Media (operator of Okiro)
+        <br />
+        Carl Berners Plass 2, Oslo, Norway
+        <br />
+        <a href="mailto:hello@okiro.online">hello@okiro.online</a>
+      </p>
+      <p>
+        You can also report individual memories directly from the app: open the memory, tap the
+        ⋯ menu, then "Report or remove."
+      </p>
+
+      <h2>13. Operator</h2>
+      <p>
+        Okiro is operated by Nordli Media, Carl Berners Plass 2, Oslo, Norway.
+      </p>
     </LegalLayout>
   );
 }

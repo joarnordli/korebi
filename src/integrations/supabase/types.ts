@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      abuse_reports: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          memory_id: string | null
+          message: string | null
+          reporter_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          memory_id?: string | null
+          message?: string | null
+          reporter_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          memory_id?: string | null
+          message?: string | null
+          reporter_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abuse_reports_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       broadcast_log: {
         Row: {
           audience: string
@@ -242,6 +283,9 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          consent_accepted_at: string | null
+          consent_age_confirmed: boolean
+          consent_tos_version: string | null
           created_at: string
           display_name: string | null
           id: string
@@ -250,6 +294,9 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          consent_accepted_at?: string | null
+          consent_age_confirmed?: boolean
+          consent_tos_version?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
@@ -258,6 +305,9 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          consent_accepted_at?: string | null
+          consent_age_confirmed?: boolean
+          consent_tos_version?: string | null
           created_at?: string
           display_name?: string | null
           id?: string

@@ -277,19 +277,23 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Build unsubscribe URL for templates that render it
+  const unsubscribeUrl = `https://okiro.online/unsubscribe?token=${unsubscribeToken}`
+  const enrichedTemplateData = { ...templateData, unsubscribeUrl }
+
   // 4. Render React Email template to HTML and plain text
   const html = await renderAsync(
-    React.createElement(template.component, templateData)
+    React.createElement(template.component, enrichedTemplateData)
   )
   const plainText = await renderAsync(
-    React.createElement(template.component, templateData),
+    React.createElement(template.component, enrichedTemplateData),
     { plainText: true }
   )
 
   // Resolve subject — supports static string or dynamic function
   const resolvedSubject =
     typeof template.subject === 'function'
-      ? template.subject(templateData)
+      ? template.subject(enrichedTemplateData)
       : template.subject
 
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
@@ -317,6 +321,10 @@ Deno.serve(async (req) => {
       label: templateName,
       idempotency_key: idempotencyKey,
       unsubscribe_token: unsubscribeToken,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>, <mailto:hello@okiro.online?subject=unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
       queued_at: new Date().toISOString(),
     },
   })
